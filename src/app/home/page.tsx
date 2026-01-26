@@ -71,9 +71,8 @@ export default function Initial() {
             </div>
           </div>
 
-          {/* Motorista */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+            <label className="flex text-sm font-medium text-gray-700 mb-2 items-center">
               <User className="w-4 h-4 mr-1" />
               Motorista
             </label>
@@ -91,7 +90,6 @@ export default function Initial() {
             </div>
           </div>
 
-          {/* Tipo de Veículo */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Tipo de Veículo
