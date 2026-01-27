@@ -35,7 +35,6 @@ export function Header() {
         </div>
       </div>
 
-      {/* Renderiza o MenuDrawer com estado controlado */}
       <MenuDrawer isOpen={menuOpen} onClose={closeMenu} />
     </>
   );

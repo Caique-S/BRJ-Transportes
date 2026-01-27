@@ -15,8 +15,8 @@ const overlayClasses = isOpen
     
 // Aplique bg-white diretamente no drawer
 const drawerClasses = isOpen
-  ? "fixed top-20 left-0 z-50 h-screen p-4 overflow-y-auto transition-transform bg-white w-3/5 border-e border-default shadow-lg"
-  : "fixed top-20 left-0 z-50 h-screen p-4 overflow-y-auto transition-transform -translate-x-full bg-white w-3/5 border-e border-default";
+  ? "fixed top-20 left-0 z-50 h-screen p-4 overflow-y-auto transition-transform bg-white w-3/5 shadow-xl"
+  : "fixed top-20 left-0 z-50 h-screen p-4 overflow-y-auto transition-transform -translate-x-full bg-white w-3/5 ";
   return (
     <>
       {/* Overlay - começa abaixo do header */}
@@ -28,7 +28,7 @@ const drawerClasses = isOpen
         className={drawerClasses}
         aria-labelledby="drawer-navigation-label"
       >
-        <div className="border-b border-default pb-4 flex items-center">
+        <div className="shadow-lg pb-4 flex items-center">
           <a
             href="/"
             className="flex items-center space-x-2 rtl:space-x-reverse"

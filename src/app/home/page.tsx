@@ -1,18 +1,47 @@
-'use client'
+"use client";
 
 import { useState } from "react";
-import { Truck, Clock, Package, User, MapPin, Lock, Save } from "lucide-react";
+import {
+  Truck,
+  Clock,
+  Package,
+  User,
+  MapPin,
+  Lock,
+  Save,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 export default function Initial() {
-    const [tipoVeiculo, setTipoVeiculo] = useState<"TRUCK" | "CARROCERIA" | "BITREM" >("TRUCK");
-    
-    const cidades = [
-      "Juazeiro - BA",
-      "Jacobina - BA",
-      "Seabra - BA",
-      "Pombal - BA",
-      "Bonfim - BA",
-    ];
+  const [tipoVeiculo, setTipoVeiculo] = useState<
+    "3/4" | "TOCO" | "TRUCK" | "CARROCERIA"
+  >("3/4");
+  const [placaCavalo, setPlacaCavalo] = useState("");
+  const [placaBau, setPlacaBau] = useState("");
+  const [placaVeiculo, setPlacaVeiculo] = useState("");
+
+  const [selectCarro, setSelectCarro] = useState<number | null>(1);
+
+  const cidades = [
+    "Juazeiro - BA",
+    "Jacobina - BA",
+    "Seabra - BA",
+    "Pombal - BA",
+    "Bonfim - BA",
+  ];
+
+  const handleScroll = (direction: "left" | "right") => {
+    const container = document.getElementById("carros-scroll-container");
+    if (container) {
+      const scrollAmount = 200;
+      if (direction === "left") {
+        container.scrollLeft -= scrollAmount;
+      } else {
+        container.scrollLeft += scrollAmount;
+      }
+    }
+  };
 
   return (
     <>
@@ -30,7 +59,10 @@ export default function Initial() {
                 Doca
               </label>
               <select className="w-full p-3 border border-gray-300 rounded-lg">
-                {[1, 2, 3, 4, 5, 6,7,8,9,10,11,12,13,14,15,16,17,18,19,20].map((doca) => (
+                {[
+                  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+                  19, 20,
+                ].map((doca) => (
                   <option key={doca} value={doca}>
                     Doca {doca}
                   </option>
@@ -58,17 +90,46 @@ export default function Initial() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Qual carro na sequência?
             </label>
-            <div className="flex gap-4">
-              {[1, 2, 3].map((num) => (
-                <button
-                  key={num}
-                  type="button"
-                  className="flex-1 p-3 border rounded-lg text-center hover:bg-gray-50"
-                >
-                  {num}º Carro
-                </button>
-              ))}
+            <div className="relative">
+              <button
+                onClick={() => handleScroll("left")}
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white border border-gray-300 rounded-full p-2 shadow-md hover:bg-gray-50"
+                aria-label="Rolar para esquerda"
+              >
+                <ChevronLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <div
+                id="carros-scroll-container"
+                className="flex gap-3 overflow-x-auto py-3 px-10 scrollbar-hide scroll-smooth"
+                style={{ scrollbarWidth: "none" }}
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => setSelectCarro(num)}
+                    className={`min-w-30 shrink-0 p-4 border rounded-lg text-center transition-all ${selectCarro === num ? "border-blue-500 bg-blue-50 text-blue-700 font-medium" : "border-gray-300 hover:bg-gray-50"}`}
+                  >
+                    <div className="font-medium text-lg">{num}º</div>
+                    <div className="text-sm mt-1">Carro</div>
+                  </button>
+                ))}
+              </div>
+              {/* ********** Botão de scroll direito **************** */}
+              <button
+                onClick={() => handleScroll("right")}
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white border border-gray-300 rounded-full p-2 shadow-md hover:bg-gray-50"
+                aria-label="Rolar para direita"
+              >
+                <ChevronRight className=" w-5 h-5 text-gray-600" />
+              </button>
+              {/* *************************************************** */}
             </div>
+            {/* <div className="mt-2 text-center text-sm text-gray-500"> indicador de posição selecionada
+              {selectCarro
+                ? `Posição ${selectCarro}º selecionada`
+                : "Selecione uma posição"}
+            </div> */}
           </div>
 
           <div className="mb-6">
@@ -96,17 +157,10 @@ export default function Initial() {
             </label>
             <div className="grid grid-cols-3 gap-2">
               {[
+                { value: "3/4", label: "3/4", desc: "1 placa" },
                 { value: "TRUCK", label: "Truck", desc: "1 placa" },
-                {
-                  value: "CARROCERIA",
-                  label: "Carroceria",
-                  desc: "2 placas",
-                },
-                {
-                  value: "BITREM",
-                  label: "Bitrem/Rodotrem",
-                  desc: "2+ placas",
-                },
+                { value: "TOCO", label: "Toco", desc: "1 placa" },
+                { value: "CARROCERIA", label: "Carroceria", desc: "2 placas" },
               ].map((tipo) => (
                 <button
                   key={tipo.value}
@@ -127,25 +181,33 @@ export default function Initial() {
               Placas do Veículo
             </label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {tipoVeiculo === "TRUCK" ? (
-                <input
-                  type="text"
-                  placeholder="Placa do truck"
-                  className="p-3 border border-gray-300 rounded-lg uppercase"
-                />
-              ) : (
+              {tipoVeiculo === "CARROCERIA" ? (
                 <>
                   <input
                     type="text"
-                    placeholder="Placa da carreta"
+                    placeholder="Cavalo Mecãnico"
                     className="p-3 border border-gray-300 rounded-lg uppercase"
                   />
                   <input
                     type="text"
-                    placeholder="Placa do baú"
+                    placeholder="Baú"
                     className="p-3 border border-gray-300 rounded-lg uppercase"
                   />
                 </>
+              ) : (
+                <input
+                  type="text"
+                  placeholder={
+                    tipoVeiculo === "3/4"
+                      ? "3/4"
+                      : tipoVeiculo === "TOCO"
+                        ? "Toco"
+                        : tipoVeiculo === "TRUCK"
+                          ? "Truck"
+                          : "Placa do Veículo"
+                  }
+                  className="p-3 border border-gray-300 rounded-lg uppercase"
+                />
               )}
             </div>
           </div>
