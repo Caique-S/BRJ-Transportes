@@ -1,25 +1,30 @@
 "use client";
 
+import { useState } from "react";
+import { Link } from "lucide-react";
+import { usePathname } from "next/navigation";
+
 interface MenuDrawerProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
 export function MenuDrawer({ isOpen, onClose }: MenuDrawerProps) {
-  // Classes para o overlay - começa abaixo do header
-// Ou mantenha um overlay transparente apenas para capturar cliques
+
+  const [isCarregamentoOpen, setIsCarregamentoOpen] = useState(false);
+  const pathname = usePathname();
 
 const overlayClasses = isOpen 
   ? "fixed top-0 left-0 right-0 bottom-0 z-30 pointer-events-none"
   : "hidden";
     
-// Aplique bg-white diretamente no drawer
+
 const drawerClasses = isOpen
-  ? "fixed top-20 left-0 z-50 h-screen p-4 overflow-y-auto transition-transform bg-white w-3/5 shadow-xl"
+  ? "fixed top-20 left-0 z-50 h-screen p-4 overflow-y-auto transition-transform bg-white w-4/6 shadow-xl"
   : "fixed top-20 left-0 z-50 h-screen p-4 overflow-y-auto transition-transform -translate-x-full bg-white w-3/5 ";
   return (
     <>
-      {/* Overlay - começa abaixo do header */}
+    
       <div className={overlayClasses} onClick={onClose} aria-hidden="true" />
 
       {/* Drawer - usando w-3/5 para 60% da tela e z-50 para ficar acima do overlay */}
@@ -28,14 +33,14 @@ const drawerClasses = isOpen
         className={drawerClasses}
         aria-labelledby="drawer-navigation-label"
       >
-        <div className="shadow-lg pb-4 flex items-center">
+        <div className=" pb-4 flex items-center ">
           <a
             href="/"
             className="flex items-center space-x-2 rtl:space-x-reverse"
           >
             <img
-              src="https://flowbite.com/docs/images/logo.svg"
-              className="h-6 w-6"
+              src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSQ4OcHN7A7gSuqSswoxGWm7CYJT1F2CSeUkQ&s"
+              className="h-10 w-14"
               alt="Logo BRJ Transportes"
             />
             <span className="self-center text-lg font-semibold whitespace-nowrap text-heading">
