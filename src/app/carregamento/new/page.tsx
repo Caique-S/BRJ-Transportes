@@ -1,25 +1,85 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Truck,
-  Clock,
-  Package,
-  User,
-  MapPin,
-  Lock,
-  Save,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Truck, Clock, Package, User, MapPin, Lock, Save, ChevronLeft, ChevronRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import Loading from "./loading"; 
+import OperationalProgressBar from "../../components/progressBarHome/OperationalProgressBar";
+import useOperationalProgress from "../../hooks/useOperationalProgress";
+
+// Usando a interface do frontend
+interface CarregamentoInput {
+  doca: number;
+  cidadeDestino: string;
+  sequenciaCarro: number;
+  motorista: {
+    nome: string;
+    cpf?: string;
+  };
+  tipoVeiculo: "3/4" | "TOCO" | "TRUCK" | "CARROCERIA";
+  placas: {
+    placaSimples?: string;
+    cavaloMecanico?: string;
+    bau?: string;
+  };
+  horarios: {
+    encostouDoca: string;
+    inicioCarregamento: string;
+    fimCarregamento: string;
+    liberacao: string;
+  };
+  lacres: {
+    traseiro: string;
+    lateralEsquerdo?: string;
+    lateralDireito?: string;
+  };
+  cargas: {
+    gaiolas: number;
+    volumosos: number;
+    mangaPallets: number;
+  };
+  observacoes?: string;
+}
 
 export default function NovoCarregamento() {
-  const [tipoVeiculo, setTipoVeiculo] = useState<"3/4" | "TOCO" | "TRUCK" | "CARROCERIA">("3/4");
-  const [placaCavalo, setPlacaCavalo] = useState("");
-  const [placaBau, setPlacaBau] = useState("");
-  const [placaVeiculo, setPlacaVeiculo] = useState("");
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [selectCarro, setSelectCarro] = useState<number | null>(1);
+  
+  const [carregamento, setCarregamento] = useState<CarregamentoInput>({
+    doca: 1,
+    cidadeDestino: "",
+    sequenciaCarro: 1,
+    motorista: {
+      nome: "",
+      cpf: "",
+    },
+    tipoVeiculo: "3/4", 
+    placas: {
+      placaSimples: "",
+      cavaloMecanico: "",
+      bau: "",
+    },
+    horarios: {
+      encostouDoca: "",
+      inicioCarregamento: "",
+      fimCarregamento: "",
+      liberacao: "",
+    },
+    lacres: {
+      traseiro: "",
+      lateralEsquerdo: "",
+      lateralDireito: "",
+    },
+    cargas: {
+      gaiolas: 0,
+      volumosos: 0,
+      mangaPallets: 0,
+    },
+    observacoes: "",
+  });
+
+  const [selectCarro, setSelectCarro] = useState<number>(1);
 
   const cidades = [
     "Juazeiro - BA",
@@ -33,6 +93,83 @@ export default function NovoCarregamento() {
     "Bonfim - BA",
   ];
 
+  const updateCarregamento = (field: keyof CarregamentoInput, value: any) => {
+    setCarregamento((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const updateMotorista = (
+    field: keyof CarregamentoInput["motorista"],
+    value: string,
+  ) => {
+    setCarregamento((prev) => ({
+      ...prev,
+      motorista: {
+        ...prev.motorista,
+        [field]: value,
+      },
+    }));
+  };
+
+  const updatePlacas = (
+    field: keyof CarregamentoInput["placas"],
+    value: string,
+  ) => {
+    setCarregamento((prev) => ({
+      ...prev,
+      placas: {
+        ...prev.placas,
+        [field]: value,
+      },
+    }));
+  };
+
+  const updateHorarios = (
+    field: keyof CarregamentoInput["horarios"],
+    value: string,
+  ) => {
+    setCarregamento((prev) => ({
+      ...prev,
+      horarios: {
+        ...prev.horarios,
+        [field]: value,
+      },
+    }));
+  };
+
+  const updateLacres = (
+    field: keyof CarregamentoInput["lacres"],
+    value: string,
+  ) => {
+    setCarregamento((prev) => ({
+      ...prev,
+      lacres: {
+        ...prev.lacres,
+        [field]: value,
+      },
+    }));
+  };
+
+  const updateCargas = (
+    field: keyof CarregamentoInput["cargas"],
+    value: number,
+  ) => {
+    setCarregamento((prev) => ({
+      ...prev,
+      cargas: {
+        ...prev.cargas,
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleSelectCarro = (num: number) => {
+    setSelectCarro(num);
+    updateCarregamento("sequenciaCarro", num);
+  };
+
   const handleScroll = (direction: "left" | "right") => {
     const container = document.getElementById("carros-scroll-container");
     if (container) {
@@ -42,6 +179,74 @@ export default function NovoCarregamento() {
       } else {
         container.scrollLeft += scrollAmount;
       }
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      setIsLoading(true);
+
+      if (!carregamento.cidadeDestino) {
+        alert("Selecione uma cidade de destino");
+        setIsLoading(false);
+        return;
+      }
+
+      if (!carregamento.motorista.nome) {
+        alert("Informe o nome do motorista");
+        setIsLoading(false);
+        return;
+      }
+
+      if (carregamento.tipoVeiculo === "CARROCERIA") {
+        if (!carregamento.placas.cavaloMecanico || !carregamento.placas.bau) {
+          alert("Para carroceria, informe o cavalo mecânico e o baú");
+          setIsLoading(false);
+          return;
+        }
+      } else {
+
+        if (!carregamento.placas.placaSimples) {
+          alert(`Informe a placa do ${carregamento.tipoVeiculo}`);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      const dadosLimpos = {
+        ...carregamento,
+        placas: {
+
+          ...(carregamento.tipoVeiculo === "CARROCERIA"
+            ? {
+                cavaloMecanico: carregamento.placas.cavaloMecanico,
+                bau: carregamento.placas.bau,
+              }
+            : { placaSimples: carregamento.placas.placaSimples }),
+        },
+      };
+
+           const response = await fetch('/api/carregamento', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dadosLimpos),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert("Carregamento salvo com sucesso!");
+        router.push('/carregamento/dashboard');
+      } else {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao salvar carregamento');
+      }
+    } catch (error: any) {
+      console.error('Erro:', error);
+      alert(`Erro ao salvar carregamento: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -60,7 +265,13 @@ export default function NovoCarregamento() {
                 <MapPin className="inline w-4 h-4 mr-1" />
                 Doca
               </label>
-              <select className="w-full p-3 border border-gray-300 rounded-lg">
+              <select
+                className="w-full p-3 border border-gray-300 rounded-lg"
+                value={carregamento.doca}
+                onChange={(e) =>
+                  updateCarregamento("doca", parseInt(e.target.value))
+                }
+              >
                 {[
                   1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
                   19, 20,
@@ -76,7 +287,13 @@ export default function NovoCarregamento() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Cidade de Destino
               </label>
-              <select className="w-full p-3 border border-gray-300 rounded-lg">
+              <select
+                className="w-full p-3 border border-gray-300 rounded-lg"
+                value={carregamento.cidadeDestino}
+                onChange={(e) =>
+                  updateCarregamento("cidadeDestino", e.target.value)
+                }
+              >
                 <option value="">Selecione a cidade</option>
                 {cidades.map((cidade) => (
                   <option key={cidade} value={cidade}>
@@ -109,7 +326,7 @@ export default function NovoCarregamento() {
                   <button
                     key={num}
                     type="button"
-                    onClick={() => setSelectCarro(num)}
+                    onClick={() => handleSelectCarro(num)}
                     className={`min-w-30 shrink-0 p-4 border rounded-lg text-center transition-all ${selectCarro === num ? "border-blue-500 bg-blue-50 text-blue-700 font-medium" : "border-gray-300 hover:bg-gray-50"}`}
                   >
                     <div className="font-medium text-lg">{num}º</div>
@@ -117,7 +334,6 @@ export default function NovoCarregamento() {
                   </button>
                 ))}
               </div>
-              {/* ********** Botão de scroll direito **************** */}
               <button
                 onClick={() => handleScroll("right")}
                 className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white border border-gray-300 rounded-full p-2 shadow-md hover:bg-gray-50"
@@ -126,12 +342,8 @@ export default function NovoCarregamento() {
                 <ChevronRight className=" w-5 h-5 text-gray-600" />
               </button>
             </div>
-            {/* <div className="mt-2 text-center text-sm text-gray-500"> indicador de posição selecionada
-              {selectCarro
-                ? `Posição ${selectCarro}º selecionada`
-                : "Selecione uma posição"}
-            </div> */}
           </div>
+
           <div className="mb-6">
             <label className="flex text-sm font-medium text-gray-700 mb-2 items-center">
               <User className="w-4 h-4 mr-1" />
@@ -142,14 +354,19 @@ export default function NovoCarregamento() {
                 type="text"
                 placeholder="Nome do motorista"
                 className="p-3 border border-gray-300 rounded-lg"
+                value={carregamento.motorista.nome}
+                onChange={(e) => updateMotorista("nome", e.target.value)}
               />
               <input
                 type="text"
                 placeholder="ID/CPF (opcional)"
                 className="p-3 border border-gray-300 rounded-lg"
+                value={carregamento.motorista.cpf || ""}
+                onChange={(e) => updateMotorista("cpf", e.target.value)}
               />
             </div>
           </div>
+
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Tipo de Veículo
@@ -164,8 +381,8 @@ export default function NovoCarregamento() {
                 <button
                   key={tipo.value}
                   type="button"
-                  onClick={() => setTipoVeiculo(tipo.value as any)}
-                  className={`p-4 border rounded-lg text-center ${tipoVeiculo === tipo.value ? "border-blue-500 bg-blue-50" : "border-gray-300"}`}
+                  onClick={() => updateCarregamento("tipoVeiculo", tipo.value)}
+                  className={`p-4 border rounded-lg text-center ${carregamento.tipoVeiculo === tipo.value ? "border-blue-500 bg-blue-50" : "border-gray-300"}`}
                 >
                   <div className="font-medium">{tipo.label}</div>
                   <div className="text-sm text-gray-500">{tipo.desc}</div>
@@ -173,41 +390,58 @@ export default function NovoCarregamento() {
               ))}
             </div>
           </div>
+
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Placas do Veículo
             </label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {tipoVeiculo === "CARROCERIA" ? (
+              {carregamento.tipoVeiculo === "CARROCERIA" ? (
                 <>
                   <input
                     type="text"
                     placeholder="Cavalo Mecãnico"
                     className="p-3 border border-gray-300 rounded-lg uppercase"
+                    value={carregamento.placas.cavaloMecanico || ""}
+                    onChange={(e) =>
+                      updatePlacas(
+                        "cavaloMecanico",
+                        e.target.value.toUpperCase(),
+                      )
+                    }
                   />
                   <input
                     type="text"
                     placeholder="Baú"
                     className="p-3 border border-gray-300 rounded-lg uppercase"
+                    value={carregamento.placas.bau || ""}
+                    onChange={(e) =>
+                      updatePlacas("bau", e.target.value.toUpperCase())
+                    }
                   />
                 </>
               ) : (
                 <input
                   type="text"
                   placeholder={
-                    tipoVeiculo === "3/4"
+                    carregamento.tipoVeiculo === "3/4"
                       ? "3/4"
-                      : tipoVeiculo === "TOCO"
+                      : carregamento.tipoVeiculo === "TOCO"
                         ? "Toco"
-                        : tipoVeiculo === "TRUCK"
+                        : carregamento.tipoVeiculo === "TRUCK"
                           ? "Truck"
                           : "Placa do Veículo"
                   }
                   className="p-3 border border-gray-300 rounded-lg uppercase"
+                  value={carregamento.placas.placaSimples || ""}
+                  onChange={(e) =>
+                    updatePlacas("placaSimples", e.target.value.toUpperCase())
+                  }
                 />
               )}
             </div>
           </div>
+
           <div className="mb-6">
             <h3 className="font-medium text-gray-700 mb-3 flex items-center">
               <Clock className="w-4 h-4 mr-2" />
@@ -221,6 +455,10 @@ export default function NovoCarregamento() {
                 <input
                   type="time"
                   className="w-full p-2 border border-gray-300 rounded"
+                  value={carregamento.horarios.encostouDoca}
+                  onChange={(e) =>
+                    updateHorarios("encostouDoca", e.target.value)
+                  }
                 />
               </div>
               <div>
@@ -230,6 +468,10 @@ export default function NovoCarregamento() {
                 <input
                   type="time"
                   className="w-full p-2 border border-gray-300 rounded"
+                  value={carregamento.horarios.inicioCarregamento}
+                  onChange={(e) =>
+                    updateHorarios("inicioCarregamento", e.target.value)
+                  }
                 />
               </div>
               <div>
@@ -239,6 +481,10 @@ export default function NovoCarregamento() {
                 <input
                   type="time"
                   className="w-full p-2 border border-gray-300 rounded"
+                  value={carregamento.horarios.fimCarregamento}
+                  onChange={(e) =>
+                    updateHorarios("fimCarregamento", e.target.value)
+                  }
                 />
               </div>
               <div>
@@ -248,10 +494,13 @@ export default function NovoCarregamento() {
                 <input
                   type="time"
                   className="w-full p-2 border border-gray-300 rounded"
+                  value={carregamento.horarios.liberacao}
+                  onChange={(e) => updateHorarios("liberacao", e.target.value)}
                 />
               </div>
             </div>
           </div>
+
           <div className="mb-6">
             <h3 className="font-medium text-gray-700 mb-3 flex items-center">
               <Lock className="w-4 h-4 mr-2" />
@@ -266,6 +515,8 @@ export default function NovoCarregamento() {
                   type="number"
                   placeholder="Número do lacre"
                   className="w-full p-3 border border-gray-300 rounded-lg"
+                  value={carregamento.lacres.traseiro}
+                  onChange={(e) => updateLacres("traseiro", e.target.value)}
                 />
               </div>
               <div>
@@ -276,6 +527,10 @@ export default function NovoCarregamento() {
                   type="number"
                   placeholder="Número do lacre"
                   className="w-full p-3 border border-gray-300 rounded-lg"
+                  value={carregamento.lacres.lateralEsquerdo || ""}
+                  onChange={(e) =>
+                    updateLacres("lateralEsquerdo", e.target.value)
+                  }
                 />
               </div>
               <div>
@@ -286,6 +541,10 @@ export default function NovoCarregamento() {
                   type="number"
                   placeholder="Número do lacre"
                   className="w-full p-3 border border-gray-300 rounded-lg"
+                  value={carregamento.lacres.lateralDireito || ""}
+                  onChange={(e) =>
+                    updateLacres("lateralDireito", e.target.value)
+                  }
                 />
               </div>
             </div>
@@ -306,6 +565,10 @@ export default function NovoCarregamento() {
                   min="0"
                   className="w-full p-3 border border-gray-300 rounded-lg"
                   placeholder="0"
+                  value={carregamento.cargas.gaiolas}
+                  onChange={(e) =>
+                    updateCargas("gaiolas", parseInt(e.target.value) || 0)
+                  }
                 />
               </div>
               <div>
@@ -317,6 +580,10 @@ export default function NovoCarregamento() {
                   min="0"
                   className="w-full p-3 border border-gray-300 rounded-lg"
                   placeholder="0"
+                  value={carregamento.cargas.volumosos}
+                  onChange={(e) =>
+                    updateCargas("volumosos", parseInt(e.target.value) || 0)
+                  }
                 />
               </div>
               <div>
@@ -328,15 +595,32 @@ export default function NovoCarregamento() {
                   min="0"
                   className="w-full p-3 border border-gray-300 rounded-lg"
                   placeholder="0"
+                  value={carregamento.cargas.mangaPallets}
+                  onChange={(e) =>
+                    updateCargas("mangaPallets", parseInt(e.target.value) || 0)
+                  }
                 />
               </div>
             </div>
           </div>
 
           <div className="flex justify-end">
-            <button className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700">
-              <Save className="w-5 h-5" />
-              Salvar Carregamento
+            <button
+              className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleSubmit}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loading />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="w-5 h-5" />
+                  Salvar Carregamento
+                </>
+              )}
             </button>
           </div>
         </div>

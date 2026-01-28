@@ -11,7 +11,12 @@ import {
   TrendingDown,
   BarChart3,
   Package,
+  Calendar,
+  Target,
+  BarChart as ChartBar
 } from "lucide-react";
+
+import OperationalProgressBar from "../components/progressBarHome/OperationalProgressBar";
 
 // Tipos
 interface StatusCard {
@@ -21,7 +26,6 @@ interface StatusCard {
   icon: React.ReactNode;
   color: string;
 }
-
 interface CidadeInfo {
   nome: string;
   quantidade: number;
@@ -29,7 +33,6 @@ interface CidadeInfo {
   estado: string;
   tipoCarga: string[];
 }
-
 interface CarregamentoStatus {
   id: number;
   placa: string;
@@ -49,6 +52,13 @@ export default function Home() {
   >([]);
   const [cidades, setCidades] = useState<CidadeInfo[]>([]);
   const [tempoAtualizado, setTempoAtualizado] = useState<string>("");
+
+  const [progressoOperacao, setProgressoOperacao] = useState({
+    totalPrevisto: 30, // Exemplo: 30 veículos previstos
+    concluidos: 3,    // Exemplo: 3 já concluídos (10%)
+    turnoAtual: "SBA02",
+    ultimaAtualizacao: new Date()
+  });
 
   // Dados estatísticos
   const estatisticas: StatusCard[] = [
@@ -134,7 +144,6 @@ export default function Home() {
       tipoCarga: ["Volumosos"],
     },
   ];
-
   // Dados de carregamento (mock)
   const carregamentosMock: CarregamentoStatus[] = [
     {
@@ -230,6 +239,33 @@ export default function Home() {
   const percentualSemGaiola = ((carrosSemGaiola / totalCarros) * 100).toFixed(
     1,
   );
+
+const buscarProgressoOperacao = async () => {
+    try {
+      const response = await fetch('/api/operacao/progresso');
+      if (response.ok) {
+        const data = await response.json();
+        setProgressoOperacao({
+          totalPrevisto: data.totalPrevisto || 30,
+          concluidos: data.concluidos || 0,
+          turnoAtual: data.turno || "SBA02",
+          ultimaAtualizacao: new Date(data.ultimaAtualizacao || new Date())
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao buscar progresso:", error);
+    }
+  };
+
+   useEffect(() => {
+    buscarProgressoOperacao();
+    
+    // Atualizar a cada 30 segundos
+    const intervalProgresso = setInterval(buscarProgressoOperacao, 30000);
+    
+    return () => clearInterval(intervalProgresso);
+  }, []);
+
 
   return (
     <div className="my-18 min-h-screen bg-gray-50 p-4 md:p-6">
