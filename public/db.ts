@@ -1,0 +1,1 @@
+{/*mongodb+srv://<db_username>:<db_password>@clusterbrj0.n04isva.mongodb.net/*/}
