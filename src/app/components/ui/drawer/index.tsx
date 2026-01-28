@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Link } from "lucide-react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 interface MenuDrawerProps {
@@ -10,43 +10,55 @@ interface MenuDrawerProps {
 }
 
 export function MenuDrawer({ isOpen, onClose }: MenuDrawerProps) {
-
   const [isCarregamentoOpen, setIsCarregamentoOpen] = useState(false);
   const pathname = usePathname();
 
-const overlayClasses = isOpen 
-  ? "fixed top-0 left-0 right-0 bottom-0 z-30 pointer-events-none"
-  : "hidden";
-    
+  const overlayClasses = isOpen
+    ? "fixed top-0 left-0 right-0 bottom-0 z-30 pointer-events-none"
+    : "hidden";
 
-const drawerClasses = isOpen
-  ? "fixed top-20 left-0 z-50 h-screen p-4 overflow-y-auto transition-transform bg-white w-4/6 shadow-xl"
-  : "fixed top-20 left-0 z-50 h-screen p-4 overflow-y-auto transition-transform -translate-x-full bg-white w-3/5 ";
+  const drawerClasses = isOpen
+    ? "fixed top-20 left-0 z-50 h-screen p-4 overflow-y-auto transition-transform bg-white w-4/6 shadow-xl"
+    : "fixed top-20 left-0 z-50 h-screen p-4 overflow-y-auto transition-transform -translate-x-full bg-white w-3/5 ";
+
+  const handleNavigation = () => {
+    onClose();
+  };
+
+  // Função para alternar o submenu
+  const toggleCarregamentoMenu = () => {
+    setIsCarregamentoOpen(!isCarregamentoOpen);
+  };
+
+  // Verificar se a rota está ativa
+  const isActive = (path: string) => {
+    return pathname === path;
+  };
+
   return (
     <>
-    
       <div className={overlayClasses} onClick={onClose} aria-hidden="true" />
 
-      {/* Drawer - usando w-3/5 para 60% da tela e z-50 para ficar acima do overlay */}
       <div
         id="drawer-navigation"
         className={drawerClasses}
         aria-labelledby="drawer-navigation-label"
       >
-        <div className=" pb-4 flex items-center ">
-          <a
+        <div className="pb-4 flex items-center">
+          <Link
             href="/"
             className="flex items-center space-x-2 rtl:space-x-reverse"
+            onClick={handleNavigation}
           >
             <img
               src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSQ4OcHN7A7gSuqSswoxGWm7CYJT1F2CSeUkQ&s"
-              className="h-10 w-14"
+              className="h-8 w-14"
               alt="Logo BRJ Transportes"
             />
             <span className="self-center text-lg font-semibold whitespace-nowrap text-heading">
               BRJ Transportes
             </span>
-          </a>
+          </Link>
           <button
             type="button"
             onClick={onClose}
@@ -76,12 +88,13 @@ const drawerClasses = isOpen
         <div className="py-5 overflow-y-auto">
           <ul className="space-y-2 font-medium">
             <li>
-              <a
-                href="#"
-                className="flex items-center px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group"
+              <Link
+                href="/"
+                className={`flex items-center px-2 py-1.5 rounded-base group ${isActive("/") ? "bg-blue-50 text-blue-700" : "text-body hover:bg-neutral-tertiary hover:text-fg-brand"}`}
+                onClick={handleNavigation}
               >
                 <svg
-                  className="w-5 h-5 transition duration-75 group-hover:text-fg-brand"
+                  className={`w-5 h-5 transition duration-75 ${isActive("/") ? "text-blue-700" : "group-hover:text-fg-brand"}`}
                   aria-hidden="true"
                   xmlns="http://www.w3.org/2000/svg"
                   width="24"
@@ -105,14 +118,15 @@ const drawerClasses = isOpen
                   />
                 </svg>
                 <span className="ms-3">Home</span>
-              </a>
+              </Link>
             </li>
+
             <li>
               <button
                 type="button"
                 className="flex items-center w-full justify-between px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group"
-                aria-controls="dropdown-example"
-                data-collapse-toggle="dropdown-example"
+                onClick={toggleCarregamentoMenu}
+                aria-expanded={isCarregamentoOpen}
               >
                 <svg
                   className="shrink-0 w-5 h-5 text-black-500 transition duration-75 group-hover:text-fg-brand"
@@ -135,7 +149,7 @@ const drawerClasses = isOpen
                   Carregamento
                 </span>
                 <svg
-                  className="w-5 h-5"
+                  className={`w-5 h-5 transition-transform duration-200 ${isCarregamentoOpen ? "rotate-180" : ""}`}
                   aria-hidden="true"
                   xmlns="http://www.w3.org/2000/svg"
                   width="24"
@@ -152,11 +166,17 @@ const drawerClasses = isOpen
                   />
                 </svg>
               </button>
-              <ul id="dropdown-example" className="hidden py-2 space-y-2">
+
+              {/* Submenu Carregamento */}
+              <ul
+                className={`py-2 space-y-2 transition-all duration-200 ${isCarregamentoOpen ? "block" : "hidden"}`}
+                id="dropdown-example"
+              >
                 <li>
-                  <a
-                    href="#"
-                    className="pl-10 flex items-center px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group"
+                  <Link
+                    href="/carregamento/new"
+                    className={`pl-10 flex items-center px-2 py-1.5 rounded-base ${isActive("/novo-carregamento") ? "bg-blue-50 text-blue-700" : "text-body hover:bg-neutral-tertiary hover:text-fg-brand"}`}
+                    onClick={handleNavigation}
                   >
                     <svg
                       className="w-4 h-4 mr-2 text-black-500"
@@ -176,12 +196,13 @@ const drawerClasses = isOpen
                       />
                     </svg>
                     Novo carregamento
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="pl-10 flex items-center px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group"
+                  <Link
+                    href="/carregamento/dashboard"
+                    className={`pl-10 flex items-center px-2 py-1.5 rounded-base ${isActive("/carregamentos/dashboard") ? "bg-blue-50 text-blue-700" : "text-body hover:bg-neutral-tertiary hover:text-fg-brand"}`}
+                    onClick={handleNavigation}
                   >
                     <svg
                       className="w-4 h-4 mr-2 text-black-500"
@@ -201,12 +222,13 @@ const drawerClasses = isOpen
                       />
                     </svg>
                     Dashboard
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="pl-10 flex items-center px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group"
+                  <Link
+                    href="/carregamento/report"
+                    className={`pl-10 flex items-center px-2 py-1.5 rounded-base ${isActive("/carregamentos/relatorios") ? "bg-blue-50 text-blue-700" : "text-body hover:bg-neutral-tertiary hover:text-fg-brand"}`}
+                    onClick={handleNavigation}
                   >
                     <svg
                       className="w-4 h-4 mr-2 text-black-500"
@@ -226,17 +248,19 @@ const drawerClasses = isOpen
                       />
                     </svg>
                     Relatórios
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </li>
+
             <li>
-              <a
-                href="#"
-                className="flex items-center px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group"
+              <Link
+                href="/mensagens"
+                className={`flex items-center px-2 py-1.5 rounded-base group ${isActive("/mensagens") ? "bg-blue-50 text-blue-700" : "text-body hover:bg-neutral-tertiary hover:text-fg-brand"}`}
+                onClick={handleNavigation}
               >
                 <svg
-                  className="shrink-0 w-5 h-5 text-black-500 transition duration-75 group-hover:text-fg-brand"
+                  className={`shrink-0 w-5 h-5 text-black-500 transition duration-75 ${isActive("/mensagens") ? "text-blue-700" : "group-hover:text-fg-brand"}`}
                   aria-hidden="true"
                   xmlns="http://www.w3.org/2000/svg"
                   width="24"
@@ -256,15 +280,17 @@ const drawerClasses = isOpen
                 <span className="inline-flex items-center justify-center w-4.5 h-4.5 ms-2 text-xs font-medium text-fg-danger-strong bg-danger-soft border border-danger-subtle rounded-full">
                   2
                 </span>
-              </a>
+              </Link>
             </li>
+
             <li>
-              <a
-                href="#"
-                className="flex items-center px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group"
+              <Link
+                href="/perfil"
+                className={`flex items-center px-2 py-1.5 rounded-base group ${isActive("/perfil") ? "bg-blue-50 text-blue-700" : "text-body hover:bg-neutral-tertiary hover:text-fg-brand"}`}
+                onClick={handleNavigation}
               >
                 <svg
-                  className="shrink-0 w-5 h-5 text-black-500 transition duration-75 group-hover:text-fg-brand"
+                  className={`shrink-0 w-5 h-5 text-black-500 transition duration-75 ${isActive("/perfil") ? "text-blue-700" : "group-hover:text-fg-brand"}`}
                   aria-hidden="true"
                   xmlns="http://www.w3.org/2000/svg"
                   width="24"
@@ -280,13 +306,10 @@ const drawerClasses = isOpen
                   />
                 </svg>
                 <span className="flex-1 ms-3 whitespace-nowrap">Perfil</span>
-              </a>
+              </Link>
             </li>
-            <li>
-              <a
-                href="#"
-                className="flex items-center px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group"
-              >
+
+            <li className="flex items-center px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group">
                 <svg
                   className="shrink-0 w-5 h-5 text-black-500 transition duration-75 group-hover:text-fg-brand"
                   aria-hidden="true"
@@ -305,7 +328,6 @@ const drawerClasses = isOpen
                   />
                 </svg>
                 <span className="flex-1 ms-3 whitespace-nowrap">Sair</span>
-              </a>
             </li>
           </ul>
         </div>
