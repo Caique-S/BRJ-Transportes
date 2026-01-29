@@ -45,8 +45,8 @@ export interface Carregamento {
 
   status: "pendente" | "em_andamento" | "concluido" | "cancelado";
   observacoes?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 
 
  timestamps: {
@@ -62,6 +62,7 @@ export interface Carregamento {
     diaOperacao: string; 
     turno?: "SBA02" | "SBA04";
     operador?: string;
+    finalizadoComBotao: boolean;
   };
 }
 
