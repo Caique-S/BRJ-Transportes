@@ -4,7 +4,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '../../lib/mongodb';
 import { ObjectId } from 'mongodb';
-
 // ============================================
 // INTERFACE DA PRÉVIA
 // ============================================
@@ -16,7 +15,6 @@ interface PreviaOperacao {
   criadoEm: Date;
   atualizadoEm: Date;
 }
-
 // ============================================
 // GET: Buscar prévia existente
 // ============================================
@@ -24,7 +22,6 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const turno = searchParams.get('turno') as "SBA02" | "SBA04" | null;
-    
     // Validação do turno
     if (!turno || (turno !== "SBA02" && turno !== "SBA04")) {
       return NextResponse.json({

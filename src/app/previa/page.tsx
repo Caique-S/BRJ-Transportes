@@ -160,7 +160,7 @@ export default function PreviaOperacional() {
         }
       */
       
-      const response = await fetch(`/api/operacao/previa?turno=${turno}`);
+      const response = await fetch(`/api/previa?turno=${turno}`);
       
       if (response.ok) {
         const data = await response.json();

@@ -1,10 +1,9 @@
-import Initial from "./home/page";
-
+import HomeDashboard from "./home/page";
 
 export default function Home() {
   return (
     <>
-    <Initial/>  
+      <HomeDashboard />
     </>
   );
 }
