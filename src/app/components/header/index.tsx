@@ -30,7 +30,7 @@ export function Header() {
           </div>
 
           <div className="flex items-center">
-            <span className="text-white font-medium">João Silva</span>
+            <span className="text-white font-medium">System</span>
           </div>
         </div>
       </div>

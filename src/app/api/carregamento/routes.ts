@@ -63,11 +63,15 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     const diaOperacao = now.toISOString().split("T")[0]; // YYYY-MM-DD
 
-    // Determinar turno baseado na hora
+    // ✅ CORREÇÃO: Lógica de turno corrigida
     const hora = now.getHours();
-    let turno: "SBA04" | "SBA02" = "SBA04";
-    if (hora >= 12 && hora < 23) turno = "SBA04";
-    if (hora >= 1 || hora < 12) turno = "SBA02";
+    let turno: "SBA02" | "SBA04" = "SBA02";
+    if (hora >= 12 && hora < 23) {
+      turno = "SBA04";
+    } else if (hora >= 1 && hora < 12) {
+      turno = "SBA02";
+    }
+    // Se hora for 0 (meia-noite) ou 23, mantém SBA02 como padrão
 
     // Validações básicas (mantenha suas validações existentes)
     const errors: string[] = [];
@@ -171,8 +175,9 @@ export async function POST(request: NextRequest) {
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME || "brj_transportes");
 
+    // ✅ CORREÇÃO: Nome da collection corrigido para "carregamentos"
     const result = await db
-      .collection<Carregamento>("carregamento")
+      .collection<Carregamento>("carregamentos")
       .insertOne(carregamento);
 
     return NextResponse.json(

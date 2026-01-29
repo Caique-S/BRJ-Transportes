@@ -59,6 +59,8 @@ export async function PUT(
     } else if (data.status === "liberado") {
       updateData.$set["timestamps.liberadoEm"] = now;
       updateData.$set["status"] = "concluido";
+      // ✅ CORREÇÃO: Adicionar finalizadoComBotao quando liberado
+      updateData.$set["metadata.finalizadoComBotao"] = true;
     }
 
     // Atualizar progresso
