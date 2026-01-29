@@ -53,7 +53,8 @@ export async function POST(request: Request) {
           'progresso.ultimaAtualizacao': agora,
           'progresso.historico': novoHistorico,
           'timestamps.liberadoEm': agora,
-          'timestamps.atualizadoEm': agora
+          'timestamps.atualizadoEm': agora,
+          'metadata.finalizadoComBotao': true  // ✅ CORREÇÃO: Adicionar flag
         }
       }
     );

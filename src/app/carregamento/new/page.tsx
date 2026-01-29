@@ -1,10 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { Truck, Clock, Package, User, MapPin, Lock, Save, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Truck,
+  Clock,
+  Package,
+  User,
+  MapPin,
+  Lock,
+  Save,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle,
+  TrendingUp,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import Loading from "./loading"; 
-import OperationalProgressBar from "../../components/progressBarHome/OperationalProgressBar";
+import Loading from "./loading";
+import OperationalProgressBar from "../../components/OperationalProgressBar";
 import useOperationalProgress from "../../hooks/useOperationalProgress";
 
 // Usando a interface do frontend
@@ -41,11 +53,64 @@ interface CarregamentoInput {
   observacoes?: string;
 }
 
+// ✅ ADICIONAR: Função para calcular progresso
+const calcularProgresso = (horarios: CarregamentoInput["horarios"]) => {
+  if (!horarios)
+    return {
+      porcentagem: 0,
+      status: "na_fila",
+      label: "Na Fila",
+      color: "bg-gray-400",
+    };
+
+  if (horarios.liberacao && horarios.liberacao.trim() !== "") {
+    return {
+      porcentagem: 100,
+      status: "liberado",
+      label: "Liberado",
+      color: "bg-green-500",
+    };
+  }
+  if (horarios.fimCarregamento && horarios.fimCarregamento.trim() !== "") {
+    return {
+      porcentagem: 75,
+      status: "finalizado",
+      label: "Finalizado",
+      color: "bg-purple-500",
+    };
+  }
+  if (
+    horarios.inicioCarregamento &&
+    horarios.inicioCarregamento.trim() !== ""
+  ) {
+    return {
+      porcentagem: 50,
+      status: "carregando",
+      label: "Carregando",
+      color: "bg-blue-500",
+    };
+  }
+  if (horarios.encostouDoca && horarios.encostouDoca.trim() !== "") {
+    return {
+      porcentagem: 25,
+      status: "encostado",
+      label: "Encostado na Doca",
+      color: "bg-orange-500",
+    };
+  }
+
+  return {
+    porcentagem: 0,
+    status: "na_fila",
+    label: "Na Fila",
+    color: "bg-gray-400",
+  };
+};
+
 export default function NovoCarregamento() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
-  
   const [carregamento, setCarregamento] = useState<CarregamentoInput>({
     doca: 1,
     cidadeDestino: "",
@@ -54,7 +119,7 @@ export default function NovoCarregamento() {
       nome: "",
       cpf: "",
     },
-    tipoVeiculo: "3/4", 
+    tipoVeiculo: "3/4",
     placas: {
       placaSimples: "",
       cavaloMecanico: "",
@@ -182,6 +247,36 @@ export default function NovoCarregamento() {
     }
   };
 
+  // ✅ ADICIONAR: Função para verificar se todos os campos obrigatórios estão preenchidos
+  const verificarCamposObrigatorios = () => {
+    const horarios = carregamento.horarios;
+    return (
+      horarios.encostouDoca &&
+      horarios.encostouDoca.trim() !== "" &&
+      horarios.inicioCarregamento &&
+      horarios.inicioCarregamento.trim() !== "" &&
+      horarios.fimCarregamento &&
+      horarios.fimCarregamento.trim() !== "" &&
+      horarios.liberacao &&
+      horarios.liberacao.trim() !== ""
+    );
+  };
+
+  // ✅ ADICIONAR: Função para preparar dados limpos
+  const prepararDados = () => {
+    return {
+      ...carregamento,
+      placas: {
+        ...(carregamento.tipoVeiculo === "CARROCERIA"
+          ? {
+              cavaloMecanico: carregamento.placas.cavaloMecanico,
+              bau: carregamento.placas.bau,
+            }
+          : { placaSimples: carregamento.placas.placaSimples }),
+      },
+    };
+  };
+
   const handleSubmit = async () => {
     try {
       setIsLoading(true);
@@ -205,7 +300,6 @@ export default function NovoCarregamento() {
           return;
         }
       } else {
-
         if (!carregamento.placas.placaSimples) {
           alert(`Informe a placa do ${carregamento.tipoVeiculo}`);
           setIsLoading(false);
@@ -213,23 +307,12 @@ export default function NovoCarregamento() {
         }
       }
 
-      const dadosLimpos = {
-        ...carregamento,
-        placas: {
+      const dadosLimpos = prepararDados();
 
-          ...(carregamento.tipoVeiculo === "CARROCERIA"
-            ? {
-                cavaloMecanico: carregamento.placas.cavaloMecanico,
-                bau: carregamento.placas.bau,
-              }
-            : { placaSimples: carregamento.placas.placaSimples }),
-        },
-      };
-
-           const response = await fetch('/api/carregamento', {
-        method: 'POST',
+      const response = await fetch("/api/carregamento", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(dadosLimpos),
       });
@@ -237,18 +320,72 @@ export default function NovoCarregamento() {
       if (response.ok) {
         const result = await response.json();
         alert("Carregamento salvo com sucesso!");
-        router.push('/carregamento/dashboard');
+        router.push("/carregamento/dashboard");
       } else {
         const error = await response.json();
-        throw new Error(error.message || 'Erro ao salvar carregamento');
+        throw new Error(error.message || "Erro ao salvar carregamento");
       }
     } catch (error: any) {
-      console.error('Erro:', error);
+      console.error("Erro:", error);
       alert(`Erro ao salvar carregamento: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
+
+  // ✅ ADICIONAR: Função para finalizar carregamento
+  const handleFinalizar = async () => {
+    if (!verificarCamposObrigatorios()) {
+      alert("Todos os horários devem estar preenchidos para finalizar!");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      const dadosLimpos = prepararDados();
+
+      // Primeiro salva o carregamento
+      const response = await fetch("/api/carregamento", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(dadosLimpos),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+
+        // Depois finaliza usando a API de finalizar
+        const finalizarResponse = await fetch(
+          `/api/carregamento/${result.id}/finalizar`,
+          {
+            method: "POST",
+          },
+        );
+
+        if (finalizarResponse.ok) {
+          alert("Carregamento finalizado com sucesso!");
+          router.push("/carregamento/dashboard");
+        } else {
+          const error = await finalizarResponse.json();
+          throw new Error(error.message || "Erro ao finalizar carregamento");
+        }
+      } else {
+        const error = await response.json();
+        throw new Error(error.message || "Erro ao salvar carregamento");
+      }
+    } catch (error: any) {
+      console.error("Erro:", error);
+      alert(`Erro ao finalizar carregamento: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Calcular progresso atual
+  const progresso = calcularProgresso(carregamento.horarios);
 
   return (
     <>
@@ -501,6 +638,37 @@ export default function NovoCarregamento() {
             </div>
           </div>
 
+          {/* ✅ ADICIONAR: Barra de Progresso */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <h3 className="font-medium text-gray-700 mb-3 flex items-center">
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Progresso do Carregamento
+            </h3>
+            <div className="w-full bg-gray-200 rounded-full h-4">
+              <div
+                className={`h-4 rounded-full transition-all duration-500 ${progresso.color}`}
+                style={{ width: `${progresso.porcentagem}%` }}
+              />
+            </div>
+            <div className="flex justify-between mt-2">
+              <span className="text-sm font-medium text-gray-600">
+                {progresso.label}
+              </span>
+              <span className="text-sm font-bold text-gray-800">
+                {progresso.porcentagem}%
+              </span>
+            </div>
+            <div className="mt-2 text-xs text-gray-500">
+              {progresso.porcentagem === 0 &&
+                "Preencha os horários para atualizar o progresso"}
+              {progresso.porcentagem === 25 && "Veículo encostou na doca"}
+              {progresso.porcentagem === 50 && "Carregamento em andamento"}
+              {progresso.porcentagem === 75 &&
+                "Carregamento finalizado, aguardando liberação"}
+              {progresso.porcentagem === 100 && "Veículo liberado!"}
+            </div>
+          </div>
+
           <div className="mb-6">
             <h3 className="font-medium text-gray-700 mb-3 flex items-center">
               <Lock className="w-4 h-4 mr-2" />
@@ -604,9 +772,10 @@ export default function NovoCarregamento() {
             </div>
           </div>
 
-          <div className="flex justify-end">
+          {/* ✅ CORREÇÃO: Dois botões - Salvar e Finalizar */}
+          <div className="flex justify-end gap-4">
             <button
-              className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleSubmit}
               disabled={isLoading}
             >
@@ -622,6 +791,46 @@ export default function NovoCarregamento() {
                 </>
               )}
             </button>
+            <button
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
+                verificarCamposObrigatorios()
+                  ? "bg-green-600 text-white hover:bg-green-700"
+                  : "bg-gray-400 text-gray-200 cursor-not-allowed"
+              }`}
+              onClick={handleFinalizar}
+              disabled={isLoading || !verificarCamposObrigatorios()}
+              title={
+                !verificarCamposObrigatorios()
+                  ? "Preencha todos os horários para finalizar"
+                  : "Finalizar carregamento"
+              }
+            >
+              {isLoading ? (
+                <>
+                  <Loading />
+                  Finalizando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-5 h-5" />
+                  Finalizar Carregamento
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* ✅ ADICIONAR: Legenda dos botões */}
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm text-gray-600">
+            <p className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+              <strong>Salvar:</strong> Salva o carregamento sem finalizar (pode
+              editar depois)
+            </p>
+            <p className="flex items-center gap-2 mt-1">
+              <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+              <strong>Finalizar:</strong> Marca como concluído e conta para a
+              meta do turno
+            </p>
           </div>
         </div>
       </div>

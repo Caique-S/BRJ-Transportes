@@ -174,6 +174,25 @@ export function MenuDrawer({ isOpen, onClose }: MenuDrawerProps) {
               >
                 <li>
                   <Link
+                    href="/carregamento/previa"
+                    className={`pl-10 flex items-center px-2 py-1.5 rounded-base ${isActive("/carregamento/previa") ? "bg-blue-50 text-blue-700" : "text-body hover:bg-neutral-tertiary hover:textfg-brand"}`}
+                    onClick={handleNavigation}
+                  >
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      fill="currentColor"
+                      viewBox="0 0 16 16"
+                    >
+                      <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z" />
+                    </svg>
+                    Previa
+                  </Link>
+                </li>
+                <li>
+                  <Link
                     href="/carregamento/new"
                     className={`pl-10 flex items-center px-2 py-1.5 rounded-base ${isActive("/novo-carregamento") ? "bg-blue-50 text-blue-700" : "text-body hover:bg-neutral-tertiary hover:text-fg-brand"}`}
                     onClick={handleNavigation}
@@ -310,24 +329,24 @@ export function MenuDrawer({ isOpen, onClose }: MenuDrawerProps) {
             </li>
 
             <li className="flex items-center px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group">
-                <svg
-                  className="shrink-0 w-5 h-5 text-black-500 transition duration-75 group-hover:text-fg-brand"
-                  aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M16 12H4m12 0-4 4m4-4-4-4m3-4h2a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-2"
-                  />
-                </svg>
-                <span className="flex-1 ms-3 whitespace-nowrap">Sair</span>
+              <svg
+                className="shrink-0 w-5 h-5 text-black-500 transition duration-75 group-hover:text-fg-brand"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M16 12H4m12 0-4 4m4-4-4-4m3-4h2a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-2"
+                />
+              </svg>
+              <span className="flex-1 ms-3 whitespace-nowrap">Sair</span>
             </li>
           </ul>
         </div>
