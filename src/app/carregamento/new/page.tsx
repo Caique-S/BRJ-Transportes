@@ -16,8 +16,6 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Loading from "./loading";
-import OperationalProgressBar from "../../components/OperationalProgressBar";
-import useOperationalProgress from "../../hooks/useOperationalProgress";
 
 // Usando a interface do frontend
 interface CarregamentoInput {

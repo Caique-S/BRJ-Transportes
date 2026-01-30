@@ -18,15 +18,28 @@ import {
 } from "lucide-react";
 
 // ============================================
-// TIPOS E INTERFACES
+// TIPOS E INTERFACES ATUALIZADOS
 // ============================================
-interface PreviaOperacao {
-  _id?: string;
-  turno: "SBA02" | "SBA04";
-  totalVeiculos: number;
-  data: string;
+interface PreviaResponse {
+  success: boolean;
+  existe: boolean;
+  turno?: "SBA02" | "SBA04";
+  totalVeiculos?: number;
+  data?: string;
   criadoEm?: string;
   atualizadoEm?: string;
+  message?: string;
+}
+
+interface SavePreviaResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    turno: "SBA02" | "SBA04";
+    totalVeiculos: number;
+    operacao: string;
+    timestamp: string;
+  };
 }
 
 interface PreviaExistente {
@@ -36,16 +49,16 @@ interface PreviaExistente {
 }
 
 // ============================================
-// PÁGINA PRÉVIA OPERACIONAL
+// PÁGINA PRÉVIA OPERACIONAL - VERSÃO CORRIGIDA
 // ============================================
 export default function PreviaOperacional() {
   const router = useRouter();
   
   // Estados do formulário
   const [turno, setTurno] = useState<"SBA02" | "SBA04">("SBA02");
-  const [totalVeiculos, setTotalVeiculos] = useState<number>(30);
+  const [totalVeiculos, setTotalVeiculos] = useState<number>(20);
   const [isLoading, setIsLoading] = useState(false);
-  const [isBuscando, setIsBuscando] = useState(true);
+  const [isBuscando, setIsBuscando] = useState(false);
   const [mensagem, setMensagem] = useState<{ tipo: "sucesso" | "erro"; texto: string } | null>(null);
   
   // Estado para prévia existente
@@ -56,129 +69,74 @@ export default function PreviaOperacional() {
   const [horaAtual, setHoraAtual] = useState<number>(0);
 
   // ============================================
-  // CONEXÃO COM BANCO DE DADOS - INSTRUÇÕES:
-  // ============================================
-  /* 
-    PARA CONECTAR AO BANCO DE DADOS, ESTA PÁGINA PRECISA:
-    
-    1. API PARA BUSCAR PRÉVIA EXISTENTE:
-       - Endpoint: GET /api/operacao/previa?turno=SBA02&data=2024-01-29
-       - Retorna: { turno, totalVeiculos, data, existe: boolean }
-       - PRECISA CRIAR: app/api/operacao/previa/route.ts
-    
-    2. API PARA SALVAR/ATUALIZAR PRÉVIA:
-       - Endpoint: POST /api/operacao/previa
-       - Body: { turno, totalVeiculos }
-       - Retorna: { success, message, data }
-       - Já existe parcialmente: routes(5).ts (precisa ajustar)
-       
-    3. MONGODB - COLEÇÃO NECESSÁRIA:
-       - previaOperacao: Armazena as previsões de cada turno
-       - Schema: { turno, totalVeiculos, data, criadoEm, atualizadoEm }
-       
-    4. VARIÁVEIS DE AMBIENTE (.env.local):
-       - MONGODB_URI=sua_string_de_conexao
-       - MONGODB_DB_NAME=brj_transportes
-    
-    5. ESTRUTURA DA COLEÇÃO previaOperacao:
-    {
-      _id: ObjectId,
-      turno: "SBA02" | "SBA04",
-      totalVeiculos: number,
-      data: ISODate,  // Data da operação (00:00:00)
-      criadoEm: ISODate,
-      atualizadoEm: ISODate
-    }
-  */
-
-  // ============================================
   // EFFECT: Determinar turno baseado na hora
   // ============================================
   useEffect(() => {
-    const agora = new Date();
-    const hora = agora.getHours();
+    const atualizarDataHora = () => {
+      const agora = new Date();
+      const hora = agora.getHours();
+      
+      setHoraAtual(hora);
+      setDataAtual(agora.toLocaleDateString('pt-BR', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }));
+      
+      // SBA02: 1h-12h | SBA04: 12h-23h
+      if (hora >= 12 && hora < 23) {
+        setTurno("SBA04");
+      } else {
+        setTurno("SBA02");
+      }
+    };
+
+    atualizarDataHora();
+    // Atualizar a hora a cada minuto
+    const intervalo = setInterval(atualizarDataHora, 60000);
     
-    setHoraAtual(hora);
-    setDataAtual(agora.toLocaleDateString('pt-BR', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }));
-    
-    // SBA02: 1h-12h | SBA04: 12h-23h
-    if (hora >= 12 && hora < 23) {
-      setTurno("SBA04");
-    } else {
-      setTurno("SBA02");
-    }
+    return () => clearInterval(intervalo);
   }, []);
 
   // ============================================
-  // FUNÇÃO: Buscar prévia existente
+  // FUNÇÃO: Buscar prévia existente (CORRIGIDA)
   // ============================================
   const buscarPreviaExistente = async () => {
+    if (!turno) return;
+    
     setIsBuscando(true);
     
     try {
-      /* 
-        CHAMADA API: GET /api/operacao/previa
-        
-        IMPLEMENTAÇÃO DA API NECESSÁRIA:
-        --------------------------------
-        // app/api/operacao/previa/route.ts
-        
-        export async function GET(request: NextRequest) {
-          try {
-            const { searchParams } = new URL(request.url);
-            const turno = searchParams.get('turno');
-            
-            const client = await clientPromise;
-            const db = client.db(process.env.MONGODB_DB_NAME);
-            
-            const hojeInicio = new Date();
-            hojeInicio.setHours(0, 0, 0, 0);
-            
-            const hojeFim = new Date();
-            hojeFim.setHours(23, 59, 59, 999);
-            
-            const previa = await db.collection('previaOperacao').findOne({
-              turno,
-              data: { $gte: hojeInicio, $lte: hojeFim }
-            });
-            
-            return NextResponse.json({
-              success: true,
-              existe: !!previa,
-              turno: previa?.turno,
-              totalVeiculos: previa?.totalVeiculos,
-              data: previa?.data
-            });
-          } catch (error) {
-            return NextResponse.json({ success: false, error: error.message });
-          }
-        }
-      */
-      
+
       const response = await fetch(`/api/operacao/previa?turno=${turno}`);
       
-      if (response.ok) {
-        const data = await response.json();
-        
-        if (data.existe && data.totalVeiculos) {
-          setPreviaExistente({
-            turno: data.turno,
-            totalVeiculos: data.totalVeiculos,
-            existe: true
-          });
-          setTotalVeiculos(data.totalVeiculos);
-        } else {
-          setPreviaExistente(null);
+      if (!response.ok) {
+        throw new Error(`Erro ${response.status}: ${response.statusText}`);
+      }
+      
+      const data: PreviaResponse = await response.json();
+      
+      if (data.success && data.existe && data.turno && data.totalVeiculos !== undefined) {
+        setPreviaExistente({
+          turno: data.turno,
+          totalVeiculos: data.totalVeiculos,
+          existe: true
+        });
+        setTotalVeiculos(data.totalVeiculos);
+      } else {
+        setPreviaExistente(null);
+        if (data.success && !data.existe) {
+          setTotalVeiculos(20); // Valor padrão quando não há prévia
         }
       }
     } catch (error) {
-      console.error("Erro ao buscar prévia:", error);
-      // Fallback: assume que não existe prévia
+      console.error("❌ Erro ao buscar prévia:", error);
+      setMensagem({
+        tipo: "erro",
+        texto: "Não foi possível buscar a prévia existente. Verifique sua conexão."
+      });
+      // Fallback seguro
       setPreviaExistente(null);
     } finally {
       setIsBuscando(false);
@@ -189,13 +147,11 @@ export default function PreviaOperacional() {
   // EFFECT: Buscar prévia quando turno muda
   // ============================================
   useEffect(() => {
-    if (turno) {
-      buscarPreviaExistente();
-    }
+    buscarPreviaExistente();
   }, [turno]);
 
   // ============================================
-  // FUNÇÃO: Salvar prévia operacional
+  // FUNÇÃO: Salvar prévia operacional (CORRIGIDA)
   // ============================================
   const handleSalvar = async () => {
     // Validações
@@ -219,23 +175,6 @@ export default function PreviaOperacional() {
     setMensagem(null);
 
     try {
-      /* 
-        CHAMADA API: POST /api/operacao/previa
-        
-        Body enviado:
-        {
-          turno: "SBA02" | "SBA04",
-          totalVeiculos: number
-        }
-        
-        IMPLEMENTAÇÃO DA API (routes(5).ts já existe, precisa ajustar):
-        ---------------------------------------------------------------
-        - Verifica se já existe prévia para o turno hoje
-        - Se existe: atualiza (updateOne)
-        - Se não existe: cria nova (insertOne)
-        - Retorna sucesso com os dados salvos
-      */
-      
       const response = await fetch('/api/operacao/previa', {
         method: 'POST',
         headers: {
@@ -247,16 +186,17 @@ export default function PreviaOperacional() {
         }),
       });
 
-      const data = await response.json();
+      const data: SavePreviaResponse = await response.json();
 
       if (response.ok && data.success) {
         setMensagem({
           tipo: "sucesso",
-          texto: previaExistente?.existe 
+          texto: data.message || (previaExistente?.existe 
             ? "Previsão atualizada com sucesso!" 
-            : "Previsão criada com sucesso!"
+            : "Previsão criada com sucesso!")
         });
         
+        // Atualizar estado local
         setPreviaExistente({
           turno,
           totalVeiculos,
@@ -265,11 +205,15 @@ export default function PreviaOperacional() {
 
         // Limpar mensagem após 3 segundos
         setTimeout(() => setMensagem(null), 3000);
+        
+        // Opcional: Redirecionar após sucesso
+        // setTimeout(() => router.push('/dashboard'), 2000);
+        
       } else {
-        throw new Error(data.message || "Erro ao salvar previsão");
+        throw new Error(data.message || "Erro desconhecido ao salvar");
       }
     } catch (error: any) {
-      console.error("Erro ao salvar:", error);
+      console.error("❌ Erro ao salvar:", error);
       setMensagem({
         tipo: "erro",
         texto: error.message || "Erro ao salvar previsão. Tente novamente."
@@ -280,292 +224,440 @@ export default function PreviaOperacional() {
   };
 
   // ============================================
+  // FUNÇÃO: Resetar formulário
+  // ============================================
+  const handleReset = () => {
+    setTotalVeiculos(30);
+    setMensagem(null);
+    buscarPreviaExistente(); // Recarregar estado atual
+  };
+
+  // ============================================
   // RENDER: Loading inicial
   // ============================================
   if (isBuscando) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Carregando...</p>
+      <div className="min-h-screen bg-linear-to from-gray-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center animate-pulse">
+          <div className="relative">
+            <div className="w-20 h-20 bg-blue-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+              <RefreshCw className="w-10 h-10 animate-spin text-blue-600" />
+            </div>
+            <div className="absolute -top-2 -right-2 w-8 h-8 bg-blue-200 rounded-full animate-ping"></div>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">Carregando prévia...</h3>
+          <p className="text-gray-500">Verificando previsão do turno {turno}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen mt-14 bg-gray-50 py-8 px-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen mt-14 bg-linear-to-br from-gray-50 to-blue-50 py-8 px-4 md:px-6">
+      <div className="max-w-4xl mx-auto">
         {/* ============================================
-            CABEÇALHO
+            CABEÇALHO MELHORADO
         ============================================ */}
         <div className="mb-8">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Voltar
-          </button>
+          <div className="flex items-center justify-between mb-6">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Voltar</span>
+            </button>
+            
+            <div className="flex items-center gap-3">
+              <div className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                {horaAtual >= 12 && horaAtual < 23 ? "Turno Noturno" : "Turno Diurno"}
+              </div>
+            </div>
+          </div>
           
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-            <Calendar className="w-8 h-8 mr-3 text-blue-600" />
-            Prévia Operacional
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Defina a meta de carregamento para o turno
-          </p>
-        </div>
-
-        {/* ============================================
-            CARD DE INFORMAÇÕES
-        ============================================ */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-          <div className="flex items-start">
-            <AlertCircle className="w-5 h-5 text-blue-600 mr-3 mt-0.5" />
-            <div>
-              <h3 className="font-semibold text-blue-900">Como funciona:</h3>
-              <p className="text-blue-800 text-sm mt-1">
-                O supervisor define a quantidade total de veículos previstos para o turno. 
-                Esta meta será usada para calcular o progresso da operação no dashboard.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* ============================================
-            FORMULÁRIO
-        ============================================ */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          {/* Data Atual */}
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-center text-gray-600">
-              <Calendar className="w-5 h-5 mr-2" />
-              <span className="font-medium">{dataAtual}</span>
-            </div>
-          </div>
-
-          {/* Seleção de Turno */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Selecione o Turno
-            </label>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                type="button"
-                onClick={() => setTurno("SBA02")}
-                className={`p-4 border-2 rounded-lg text-center transition-all ${
-                  turno === "SBA02"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <Sun className={`w-8 h-8 mx-auto mb-2 ${
-                  turno === "SBA02" ? "text-blue-600" : "text-gray-400"
-                }`} />
-                <div className={`font-bold ${
-                  turno === "SBA02" ? "text-blue-700" : "text-gray-700"
-                }`}>
-                  SBA02
-                </div>
-                <div className="text-sm text-gray-500 mt-1">
-                  01:00 - 12:00
-                </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  Turno Diurno
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setTurno("SBA04")}
-                className={`p-4 border-2 rounded-lg text-center transition-all ${
-                  turno === "SBA04"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <Moon className={`w-8 h-8 mx-auto mb-2 ${
-                  turno === "SBA04" ? "text-blue-600" : "text-gray-400"
-                }`} />
-                <div className={`font-bold ${
-                  turno === "SBA04" ? "text-blue-700" : "text-gray-700"
-                }`}>
-                  SBA04
-                </div>
-                <div className="text-sm text-gray-500 mt-1">
-                  12:00 - 23:00
-                </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  Turno Noturno
-                </div>
-              </button>
-            </div>
-            
-            {/* Indicador de turno atual */}
-            <div className="mt-3 text-center">
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${
-                (turno === "SBA02" && (horaAtual >= 1 && horaAtual < 12)) ||
-                (turno === "SBA04" && (horaAtual >= 12 && horaAtual < 23))
-                  ? "bg-green-100 text-green-700"
-                  : "bg-gray-100 text-gray-600"
-              }`}>
-                {(turno === "SBA02" && (horaAtual >= 1 && horaAtual < 12)) ||
-                 (turno === "SBA04" && (horaAtual >= 12 && horaAtual < 23))
-                  ? "🟢 Turno em andamento"
-                  : "⚪ Turno futuro"}
-              </span>
-            </div>
-          </div>
-
-          {/* Quantidade de Veículos */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Quantidade Total de Veículos Previstos
-            </label>
-            <div className="relative">
-              <Truck className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" />
-              <input
-                type="number"
-                min="1"
-                max="100"
-                value={totalVeiculos}
-                onChange={(e) => setTotalVeiculos(parseInt(e.target.value) || 0)}
-                className="w-full pl-14 pr-4 py-4 text-2xl font-bold text-center border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                placeholder="30"
-              />
-            </div>
-            
-            {/* Slider para facilitar */}
-            <input
-              type="range"
-              min="1"
-              max="100"
-              value={totalVeiculos}
-              onChange={(e) => setTotalVeiculos(parseInt(e.target.value))}
-              className="w-full mt-4 accent-blue-600"
-            />
-            
-            <div className="flex justify-between text-sm text-gray-500 mt-1">
-              <span>1</span>
-              <span>50</span>
-              <span>100</span>
-            </div>
-          </div>
-
-          {/* Resumo da Meta */}
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <h3 className="font-semibold text-gray-700 mb-3 flex items-center">
-              <TrendingUp className="w-5 h-5 mr-2" />
-              Resumo da Meta
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-3 bg-white rounded-lg">
-                <div className="text-3xl font-bold text-blue-600">{totalVeiculos}</div>
-                <div className="text-sm text-gray-600">Veículos Previstos</div>
+          <div className="text-center mb-6">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 flex items-center justify-center gap-3">
+              <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg">
+                <Calendar className="w-8 h-8" />
               </div>
-              <div className="text-center p-3 bg-white rounded-lg">
-                <div className="text-3xl font-bold text-green-600">{turno}</div>
-                <div className="text-sm text-gray-600">Turno Selecionado</div>
-              </div>
-            </div>
+              Prévia Operacional
+            </h1>
+            <p className="text-gray-600 mt-3 max-w-2xl mx-auto">
+              Defina a quantidade de veículos para a expedição no turno atual. Esta previsão será usada para acompanhar o progresso da operação.
+            </p>
           </div>
 
-          {/* Alerta de Prévia Existente */}
-          {previaExistente?.existe && (
-            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="flex items-start">
-                <AlertCircle className="w-5 h-5 text-yellow-600 mr-3 mt-0.5" />
+          {/* Data Atual Destaque */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 mb-8 border border-gray-200 shadow-sm">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-50 rounded-xl">
+                  <Calendar className="w-6 h-6 text-blue-600" />
+                </div>
                 <div>
-                  <h3 className="font-semibold text-yellow-900">Atenção!</h3>
-                  <p className="text-yellow-800 text-sm mt-1">
-                    Já existe uma previsão de <strong>{previaExistente.totalVeiculos} veículos</strong> para o turno {previaExistente.turno} hoje.
-                    <br />
-                    Ao salvar, você irá <strong>atualizar</strong> esta previsão.
-                  </p>
+                  <div className="font-semibold text-gray-900">{dataAtual}</div>
+                  <div className="text-sm text-gray-500">Hoje • {horaAtual.toString().padStart(2, '0')}:00h</div>
+                </div>
+              </div>
+              
+              <button
+                onClick={buscarPreviaExistente}
+                disabled={isBuscando}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors"
+              >
+                <RefreshCw className={`w-4 h-4 ${isBuscando ? 'animate-spin' : ''}`} />
+                Atualizar
+              </button>
+            </div>
+          </div>
+        </div>
+ {/* Card de Ajuda */}
+            <div className="bg-linear-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 p-6">
+              <h3 className="font-bold text-blue-900 text-lg mb-3 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" />
+                Como Funciona
+              </h3>
+              <ul className="space-y-2 text-blue-800 text-sm">
+                <li className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
+                  <span>Envie o arquivo de atribuição ".CSV" gerado pelo Logistics.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
+                  <span>O sistema calculará o progresso automaticamente.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
+                  <span>Você pode enviar uma previsão manualmente caso seja nescessário.</span>
+                </li>
+              </ul>
+            </div>
+        {/* ============================================
+            CONTEÚDO PRINCIPAL EM GRID
+        ============================================ */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* COLUNA 1: Informações e Status */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Card de Turno Atual */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <h3 className="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
+                <Sun className="w-5 h-5 text-yellow-500" />
+                Turno Atual
+              </h3>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <span className="text-gray-600">Hora Atual:</span>
+                  <span className="font-bold text-gray-900">{horaAtual.toString().padStart(2, '0')}:00h</span>
+                </div>
+                
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <span className="text-gray-600">Status:</span>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    (turno === "SBA02" && horaAtual >= 1 && horaAtual < 12) ||
+                    (turno === "SBA04" && horaAtual >= 12 && horaAtual < 23)
+                      ? "bg-green-100 text-green-700"
+                      : "bg-yellow-100 text-yellow-700"
+                  }`}>
+                    {(turno === "SBA02" && horaAtual >= 1 && horaAtual < 12) ||
+                     (turno === "SBA04" && horaAtual >= 12 && horaAtual < 23)
+                      ? "Em Andamento"
+                      : "Fora do Horário"}
+                  </span>
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Mensagem de Sucesso/Erro */}
-          {mensagem && (
-            <div className={`mb-6 p-4 rounded-lg ${
-              mensagem.tipo === "sucesso"
-                ? "bg-green-50 border border-green-200"
-                : "bg-red-50 border border-red-200"
-            }`}>
-              <div className="flex items-center">
-                {mensagem.tipo === "sucesso" ? (
-                  <CheckCircle className="w-5 h-5 text-green-600 mr-3" />
-                ) : (
-                  <AlertCircle className="w-5 h-5 text-red-600 mr-3" />
+          {/* COLUNA 2 e 3: Formulário Principal */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+              {/* Header do Card */}
+              <div className="bg-linear-to-r from-blue-600 to-blue-700 px-6 py-4">
+                <h2 className="text-xl font-bold text-white">Definir Prévia do Turno</h2>
+                <p className="text-blue-100 text-sm">Configure a meta operacional para acompanhamento</p>
+              </div>
+
+              <div className="p-6">
+                {/* Seleção de Turno */}
+                <div className="mb-8">
+                  <label className="block text-sm font-semibold text-gray-700 mb-4">
+                    Selecione o Turno para Configurar
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setTurno("SBA02")}
+                      className={`p-5 border-2 rounded-xl text-left transition-all duration-200 ${
+                        turno === "SBA02"
+                          ? "border-blue-500 bg-blue-50 shadow-md"
+                          : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`p-3 rounded-lg ${
+                          turno === "SBA02" ? "bg-blue-100" : "bg-gray-100"
+                        }`}>
+                          <Sun className={`w-6 h-6 ${
+                            turno === "SBA02" ? "text-blue-600" : "text-gray-400"
+                          }`} />
+                        </div>
+                        <div>
+                          <div className={`font-bold text-lg ${
+                            turno === "SBA02" ? "text-blue-700" : "text-gray-700"
+                          }`}>
+                            SBA02
+                          </div>
+                          <div className="text-sm text-gray-500 mt-1">
+                            01:00 - 12:00 • Diurno
+                          </div>
+                          {turno === "SBA02" && (
+                            <div className="text-xs text-blue-600 font-medium mt-2">
+                              ✓ Selecionado
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setTurno("SBA04")}
+                      className={`p-5 border-2 rounded-xl text-left transition-all duration-200 ${
+                        turno === "SBA04"
+                          ? "border-blue-500 bg-blue-50 shadow-md"
+                          : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`p-3 rounded-lg ${
+                          turno === "SBA04" ? "bg-blue-100" : "bg-gray-100"
+                        }`}>
+                          <Moon className={`w-6 h-6 ${
+                            turno === "SBA04" ? "text-blue-600" : "text-gray-400"
+                          }`} />
+                        </div>
+                        <div>
+                          <div className={`font-bold text-lg ${
+                            turno === "SBA04" ? "text-blue-700" : "text-gray-700"
+                          }`}>
+                            SBA04
+                          </div>
+                          <div className="text-sm text-gray-500 mt-1">
+                            12:00 - 23:00 • Noturno
+                          </div>
+                          {turno === "SBA04" && (
+                            <div className="text-xs text-blue-600 font-medium mt-2">
+                              ✓ Selecionado
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quantidade de Veículos */}
+                <div className="mb-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Quantidade Total de Veículos
+                    </label>
+                    <div className="text-sm text-gray-500">
+                      Mín: 1 • Máx: 100
+                    </div>
+                  </div>
+                  
+                  {/* Input com ícone */}
+                  <div className="relative mb-4">
+                    <Truck className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" />
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={totalVeiculos}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value);
+                        if (!isNaN(value) && value >= 1 && value <= 100) {
+                          setTotalVeiculos(value);
+                        }
+                      }}
+                      className="w-full pl-14 pr-4 py-4 text-3xl font-bold text-center border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none"
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">
+                      veículos
+                    </div>
+                  </div>
+                  
+                  {/* Slider */}
+                  <div className="px-2">
+                    <input
+                      type="range"
+                      min="1"
+                      max="100"
+                      value={totalVeiculos}
+                      onChange={(e) => setTotalVeiculos(parseInt(e.target.value))}
+                      className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:border-4 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-lg"
+                    />
+                    <div className="flex justify-between text-sm text-gray-500 mt-2 px-1">
+                      <span>1</span>
+                      <span>25</span>
+                      <span>50</span>
+                      <span>75</span>
+                      <span>100</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card de Resumo */}
+                <div className="mb-8 bg-linear-to-r from-gray-50 to-blue-50 rounded-xl p-5 border border-gray-200">
+                  <h3 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-blue-600" />
+                    Resumo da Configuração
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                      <div className="text-3xl font-bold text-blue-600">{totalVeiculos}</div>
+                      <div className="text-sm text-gray-600">Veículos</div>
+                    </div>
+                    <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                      <div className="text-2xl font-bold text-gray-800">{turno}</div>
+                      <div className="text-sm text-gray-600">Turno</div>
+                    </div>
+                    <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                      <div className="text-2xl font-bold text-gray-800">
+                        {horaAtual >= 12 && horaAtual < 23 ? "Noturno" : "Diurno"}
+                      </div>
+                      <div className="text-sm text-gray-600">Período</div>
+                    </div>
+                    <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                      <div className="text-2xl font-bold text-gray-800">
+                        {previaExistente?.existe ? "Atualizar" : "Novo"}
+                      </div>
+                      <div className="text-sm text-gray-600">Status</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Alerta de Prévia Existente */}
+                {previaExistente?.existe && (
+                  <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                      <div>
+                        <h3 className="font-semibold text-amber-900">Prévia Existente Detectada</h3>
+                        <p className="text-amber-800 text-sm mt-1">
+                          Já existe uma previsão de <strong>{previaExistente.totalVeiculos} veículos</strong> 
+                          para o turno {previaExistente.turno}. 
+                          Ao salvar, você <strong>substituirá</strong> essa previsão.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 )}
-                <span className={mensagem.tipo === "sucesso" ? "text-green-800" : "text-red-800"}>
-                  {mensagem.texto}
-                </span>
+
+                {/* Mensagens do Sistema */}
+                {mensagem && (
+                  <div className={`mb-8 p-4 rounded-xl border ${
+                    mensagem.tipo === "sucesso" 
+                      ? "bg-green-50 border-green-200" 
+                      : "bg-red-50 border-red-200"
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      {mensagem.tipo === "sucesso" ? (
+                        <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+                      )}
+                      <div>
+                        <p className={`font-medium ${
+                          mensagem.tipo === "sucesso" ? "text-green-800" : "text-red-800"
+                        }`}>
+                          {mensagem.texto}
+                        </p>
+                        {mensagem.tipo === "sucesso" && (
+                          <p className="text-green-700 text-sm mt-1">
+                            A previsão será usada para calcular o progresso do turno.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Botões de Ação */}
+                <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
+                  <button
+                    onClick={() => router.push('/home')}
+                    className="flex-1 px-6 py-4 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  
+                  <button
+                    onClick={handleReset}
+                    className="flex-1 px-6 py-4 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+                  >
+                    Redefinir
+                  </button>
+                  
+                  <button
+                    onClick={handleSalvar}
+                    disabled={isLoading}
+                    className="flex-1 px-6 py-4 bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                  >
+                    {isLoading ? (
+                      <>
+                        <RefreshCw className="w-5 h-5 animate-spin" />
+                        Processando...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-5 h-5" />
+                        {previaExistente?.existe ? "Atualizar Previsão" : "Salvar Previsão"}
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
-          )}
 
-          {/* Botões de Ação */}
-          <div className="flex gap-4">
-            <button
-              onClick={() => router.push('/home')}
-              className="flex-1 px-6 py-4 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleSalvar}
-              disabled={isLoading}
-              className="flex-1 px-6 py-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-            >
-              {isLoading ? (
-                <>
-                  <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save className="w-5 h-5 mr-2" />
-                  {previaExistente?.existe ? "Atualizar Previsão" : "Salvar Previsão"}
-                </>
-              )}
-            </button>
+            {/* Informações Adicionais */}
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  Para Supervisores
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  Defina a meta antes do início do turno para melhor acompanhamento. 
+                  A previsão pode ser ajustada durante a operação conforme necessidade.
+                </p>
+              </div>
+              
+              <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-blue-600" />
+                  Atualização em Tempo Real
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  O progresso é calculado automaticamente com base nos carregamentos 
+                  concluídos. Acompanhe em tempo real no dashboard.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* ============================================
-            INFORMAÇÕES ADICIONAIS
-        ============================================ */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <h3 className="font-semibold text-gray-700 mb-2 flex items-center">
-              <Users className="w-5 h-5 mr-2 text-blue-600" />
-              Para Supervisores
-            </h3>
-            <p className="text-sm text-gray-600">
-              Defina a meta antes do início do turno para melhor acompanhamento da operação.
-            </p>
+        {/* Rodapé */}
+        <div className="mt-12 text-center">
+          <div className="inline-flex items-center gap-2 text-gray-500 text-sm">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            Sistema conectado • BRJ Transportes
           </div>
-          
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <h3 className="font-semibold text-gray-700 mb-2 flex items-center">
-              <Clock className="w-5 h-5 mr-2 text-blue-600" />
-              Atualização
-            </h3>
-            <p className="text-sm text-gray-600">
-              Você pode atualizar a previsão a qualquer momento durante o turno.
-            </p>
-          </div>
-        </div>
-
-        {/* ============================================
-            RODAPÉ
-        ============================================ */}
-        <div className="mt-8 text-center text-gray-500 text-sm">
-          <p>BRJ Transportes • Sistema de Gestão Operacional</p>
+          <p className="text-gray-400 text-sm mt-2">
+            © {new Date().getFullYear()} Sistema de Gestão Operacional • v1.0.0
+          </p>
         </div>
       </div>
     </div>

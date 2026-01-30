@@ -1,4 +1,6 @@
+{/*
 // app/lib/api/carregamento.ts
+
 export const atualizarProgresso = async (carregamentoId: string, porcentagem: number, status: string) => {
   try {
     const response = await fetch(`/api/carregamentos/${carregamentoId}/progresso`, {
@@ -35,3 +37,4 @@ export const atualizarProgresso = async (carregamentoId: string, porcentagem: nu
     throw error;
   }
 };
+  */}
