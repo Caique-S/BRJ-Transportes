@@ -20,7 +20,6 @@ import {
   Users
 } from "lucide-react";
 
-// ============================================
 // TIPOS E INTERFACES
 // ============================================
 interface StatusCard {
