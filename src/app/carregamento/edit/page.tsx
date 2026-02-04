@@ -177,7 +177,7 @@ const [isLoading, setIsLoading] = useState(true);
 
       try {
         console.log("o Doca ID: " + docaId);
-        const response = await fetch(`/api/carregamentos/${docaId}`);
+        const response = await fetch(`/api/carregamento/${docaId}`);
         if (!response.ok) {
           throw new Error("Erro ao carregar dados do carregamento");
         }

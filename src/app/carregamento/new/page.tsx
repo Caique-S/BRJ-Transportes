@@ -465,7 +465,7 @@ export default function NovoCarregamento() {
 
       const dadosParaAPI = prepararDadosParaAPI();
 
-      const response = await fetch("/api/carregamentos", {
+      const response = await fetch("/api/carregamento", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
