@@ -7,22 +7,21 @@ import {
   Calendar,
   BarChart3,
   CheckCircle,
-  AlertCircle,
-  Loader,
   Download,
   Filter,
   RefreshCw,
-  Target,
   MapPin,
   ChevronLeft,
   ChevronRight,
   Car,
+  Loader,
+  Edit,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface DocaStatus {
   id: number;
-  status: "ocupada" | "liberada" | "manutencao" | "disponivel";
+  status: "ocupada" | "liberada"  | "disponivel";
   motorista?: string;
   cidadeDestino?: string;
   placaVeiculo?: string;
@@ -35,6 +34,20 @@ interface DocaStatus {
     volumosos: number;
     mangaPallets: number;
   };
+  _id?: string;
+  sequenciaCarro?: number;
+  horarios?: {
+    encostouDoca: string;
+    inicioCarregamento: string;
+    fimCarregamento: string;
+    liberacao: string;
+  };
+  lacres?: {
+    traseiro: string;
+    lateralEsquerdo?: string;
+    lateralDireito?: string;
+  };
+  createdAt?: string;
 }
 
 interface DashboardStats {
@@ -72,163 +85,7 @@ export default function DashboardAnalise() {
     },
   });
 
-  const [todasDocas, setTodasDocas] = useState<DocaStatus[]>([
-    {
-      id: 1,
-      status: "ocupada",
-      motorista: "João Silva",
-      cidadeDestino: "Juazeiro - BA",
-      placaVeiculo: "ABC-1234",
-      tipoVeiculo: "TRUCK",
-      horarioEntrada: "08:30",
-      tempoTotal: "02:15",
-      carga: { gaiolas: 150, volumosos: 45, mangaPallets: 12 },
-    },
-    {
-      id: 2,
-      status: "ocupada",
-      motorista: "Maria Santos",
-      cidadeDestino: "Santo Antônio - BA",
-      placaVeiculo: "DEF-5678",
-      tipoVeiculo: "3/4",
-      horarioEntrada: "09:15",
-      tempoTotal: "01:45",
-      carga: { gaiolas: 120, volumosos: 30, mangaPallets: 8 },
-    },
-    { id: 3, status: "disponivel" },
-    {
-      id: 4,
-      status: "ocupada",
-      motorista: "Pedro Oliveira",
-      cidadeDestino: "Itaberaba - BA",
-      placaVeiculo: "GHI-9012/XYZ-3456",
-      tipoVeiculo: "CARROCERIA",
-      horarioEntrada: "10:00",
-      tempoTotal: "02:45",
-      carga: { gaiolas: 180, volumosos: 60, mangaPallets: 15 },
-    },
-    {
-      id: 5,
-      status: "liberada",
-      motorista: "Ana Costa",
-      cidadeDestino: "Valença - BA",
-      placaVeiculo: "JKL-7890",
-      tipoVeiculo: "TOCO",
-      horarioEntrada: "07:45",
-      horarioSaida: "09:30",
-      tempoTotal: "01:45",
-      carga: { gaiolas: 200, volumosos: 50, mangaPallets: 10 },
-    },
-    { id: 6, status: "disponivel" },
-    { id: 7, status: "manutencao" },
-    {
-      id: 8,
-      status: "ocupada",
-      motorista: "Carlos Souza",
-      cidadeDestino: "Jacobina - BA",
-      placaVeiculo: "MNO-1234",
-      tipoVeiculo: "TRUCK",
-      horarioEntrada: "11:00",
-      tempoTotal: "02:15",
-      carga: { gaiolas: 170, volumosos: 40, mangaPallets: 9 },
-    },
-    {
-      id: 9,
-      status: "ocupada",
-      motorista: "Fernanda Lima",
-      cidadeDestino: "Serrinha - BA",
-      placaVeiculo: "PQR-5678",
-      tipoVeiculo: "3/4",
-      horarioEntrada: "08:45",
-      tempoTotal: "01:45",
-      carga: { gaiolas: 110, volumosos: 25, mangaPallets: 6 },
-    },
-    { id: 10, status: "disponivel" },
-    {
-      id: 11,
-      status: "ocupada",
-      motorista: "Roberto Alves",
-      cidadeDestino: "Pombal - BA",
-      placaVeiculo: "STU-9012",
-      tipoVeiculo: "TRUCK",
-      horarioEntrada: "10:30",
-      tempoTotal: "02:15",
-      carga: { gaiolas: 160, volumosos: 35, mangaPallets: 8 },
-    },
-    {
-      id: 12,
-      status: "liberada",
-      motorista: "Mariana Rocha",
-      cidadeDestino: "Bonfim - BA",
-      placaVeiculo: "VWX-3456/YZ-7890",
-      tipoVeiculo: "CARROCERIA",
-      horarioEntrada: "09:30",
-      horarioSaida: "12:00",
-      tempoTotal: "02:30",
-      carga: { gaiolas: 190, volumosos: 55, mangaPallets: 14 },
-    },
-    { id: 13, status: "disponivel" },
-    {
-      id: 14,
-      status: "liberada",
-      motorista: "Paulo Mendes",
-      cidadeDestino: "Seabra - BA",
-      placaVeiculo: "ABC-4321",
-      tipoVeiculo: "TOCO",
-      horarioEntrada: "08:00",
-      horarioSaida: "09:45",
-      tempoTotal: "01:45",
-      carga: { gaiolas: 140, volumosos: 30, mangaPallets: 7 },
-    },
-    { id: 15, status: "manutencao" },
-    {
-      id: 16,
-      status: "ocupada",
-      motorista: "Juliana Castro",
-      cidadeDestino: "Juazeiro - BA",
-      placaVeiculo: "DEF-8765",
-      tipoVeiculo: "TRUCK",
-      horarioEntrada: "11:30",
-      tempoTotal: "02:30",
-      carga: { gaiolas: 175, volumosos: 45, mangaPallets: 11 },
-    },
-    {
-      id: 17,
-      status: "liberada",
-      motorista: "Ricardo Nunes",
-      cidadeDestino: "Valença - BA",
-      placaVeiculo: "GHI-2109",
-      tipoVeiculo: "3/4",
-      horarioEntrada: "07:30",
-      horarioSaida: "09:15",
-      tempoTotal: "01:45",
-      carga: { gaiolas: 130, volumosos: 20, mangaPallets: 5 },
-    },
-    { id: 18, status: "disponivel" },
-    {
-      id: 19,
-      status: "ocupada",
-      motorista: "Camila Torres",
-      cidadeDestino: "Itaberaba - BA",
-      placaVeiculo: "JKL-6543/MNO-0987",
-      tipoVeiculo: "CARROCERIA",
-      horarioEntrada: "10:45",
-      tempoTotal: "02:45",
-      carga: { gaiolas: 165, volumosos: 50, mangaPallets: 13 },
-    },
-    {
-      id: 20,
-      status: "liberada",
-      motorista: "Lucas Martins",
-      cidadeDestino: "Jacobina - BA",
-      placaVeiculo: "PQR-3210",
-      tipoVeiculo: "TRUCK",
-      horarioEntrada: "09:00",
-      horarioSaida: "11:15",
-      tempoTotal: "02:15",
-      carga: { gaiolas: 155, volumosos: 35, mangaPallets: 9 },
-    },
-  ]);
+  const [todasDocas, setTodasDocas] = useState<DocaStatus[]>([]);
 
   const [currentPage, setCurrentPage] = useState(0);
   const itemsPerPage = 4; // 2 colunas x 2 linhas = 4 docas por página
@@ -241,56 +98,30 @@ export default function DashboardAnalise() {
     { value: "personalizado", label: "Personalizado" },
   ];
 
-  useEffect(() => {
-    // Simular carregamento de dados
-    const loadDashboardData = async () => {
-      setIsLoading(true);
+  // Função para carregar dados do dashboard
+  const loadDashboardData = async () => {
+    setIsLoading(true);
 
-      // Simular delay de rede
-      await new Promise((resolve) => setTimeout(resolve, 800));
+    try {
+      const response = await fetch(`/api/dashboard?date=${selectedDate}`);
+      if (!response.ok) {
+        throw new Error('Erro ao carregar dados');
+      }
+      const data = await response.json();
 
-      // Calcular estatísticas com base nas docas
-      const docasEmUso = todasDocas.filter(
-        (d) => d.status === "ocupada",
-      ).length;
-      const rotasLiberadas = todasDocas.filter(
-        (d) => d.status === "liberada",
-      ).length;
-      const docasDisponiveis = todasDocas.filter(
-        (d) => d.status === "disponivel",
-      ).length;
-      const manutencao = todasDocas.filter(
-        (d) => d.status === "manutencao",
-      ).length;
-
-      const cargaTotal = todasDocas.reduce(
-        (acc, curr) => ({
-          gaiolas: acc.gaiolas + (curr.carga?.gaiolas || 0),
-          volumosos: acc.volumosos + (curr.carga?.volumosos || 0),
-          mangaPallets: acc.mangaPallets + (curr.carga?.mangaPallets || 0),
-        }),
-        { gaiolas: 0, volumosos: 0, mangaPallets: 0 },
-      );
-
-      const eficiencia =
-        todasDocas.length > 0
-          ? Math.round((rotasLiberadas / (docasEmUso + rotasLiberadas)) * 100)
-          : 0;
-
-      setStats({
-        docasEmUso,
-        rotasLiberadas,
-        docasDisponiveis,
-        tempoMedio: "01:52",
-        eficiencia,
-        cargaTotal,
-      });
-
+      setStats(data.stats);
+      setTodasDocas(data.todasDocas);
+    } catch (error) {
+      console.error('Erro ao carregar dados do dashboard:', error);
+      alert('Erro ao carregar dados. Tente novamente.');
+    } finally {
       setIsLoading(false);
-    };
+    }
+  };
 
+  useEffect(() => {
     loadDashboardData();
-  }, [selectedDate, selectedPeriod, todasDocas]);
+  }, [selectedDate, selectedPeriod]);
 
   // Filtrar docas baseado no modo de visualização
   const docasFiltradas = todasDocas.filter((doca) => {
@@ -302,7 +133,6 @@ export default function DashboardAnalise() {
   });
 
   const handleExportData = () => {
-    // Simular exportação de dados
     const dataStr = JSON.stringify(
       {
         periodo: selectedPeriod,
@@ -328,14 +158,52 @@ export default function DashboardAnalise() {
   };
 
   const handleRefresh = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 4000);
+    loadDashboardData();
   };
 
   const handleNovoCarregamento = () => {
     router.push("/carregamento/new");
+  };
+
+  // NOVA FUNÇÃO: Editar carregamento da doca
+  const handleEditarCarregamento = (doca: DocaStatus) => {
+    if (doca.status === "ocupada" && doca._id) {
+      // Redirecionar para a página de carregamento com os dados existentes
+      const carregamentoData = {
+        doca: doca.id,
+        cidadeDestino: doca.cidadeDestino || "",
+        motorista: {
+          nome: doca.motorista || "",
+          cpf: "",
+        },
+        tipoVeiculo: doca.tipoVeiculo || "3/4",
+        placas: {
+          placaSimples: doca.placaVeiculo || "",
+        },
+        horarios: doca.horarios || {
+          encostouDoca: doca.horarioEntrada || "",
+          inicioCarregamento: "",
+          fimCarregamento: "",
+          liberacao: "",
+        },
+        lacres: doca.lacres || {
+          traseiro: "",
+          lateralEsquerdo: "",
+          lateralDireito: "",
+        },
+        cargas: doca.carga || {
+          gaiolas: 0,
+          volumosos: 0,
+          mangaPallets: 0,
+        },
+        _id: doca._id,
+        isEditing: true,
+      };
+
+      // Salvar os dados no localStorage para a página de carregamento acessar
+      localStorage.setItem('carregamentoEditavel', JSON.stringify(carregamentoData));
+      router.push(`/carregamento/edit?id=${doca._id}&doca=${doca.id}`);
+    }
   };
 
   const handleScroll = (direction: "left" | "right") => {
@@ -377,13 +245,24 @@ export default function DashboardAnalise() {
       : "bg-green-100 text-green-800";
   };
 
+  // Estilo para card clicável
+  const getCardStyle = (doca: DocaStatus) => {
+    const baseStyle = `p-4 border rounded-lg transition-all duration-300 ${getBorderColor()} ${getBgColor()}`;
+
+    if (viewMode === "em_uso" && doca.status === "ocupada") {
+      return `${baseStyle} cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.99]`;
+    }
+
+    return baseStyle;
+  };
+
   return (
     <>
       <div className="max-w-7xl mx-auto mt-20 p-4">
         {/* Cabeçalho */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold flex items-center gap-3">
+            <h1 className="text-2xl font-bold flex items-center gap-3">
               <BarChart3 className="text-blue-600" />
               Dashboard de Carregamentos
             </h1>
@@ -447,7 +326,6 @@ export default function DashboardAnalise() {
                     onClick={() => {
                       setSelectedPeriod(periodo.value);
                       if (periodo.value !== "personalizado") {
-                        // Atualizar data automaticamente
                         const today = new Date();
                         if (periodo.value === "ontem") {
                           const yesterday = new Date(today);
@@ -469,353 +347,456 @@ export default function DashboardAnalise() {
             </div>
           </div>
         </div>
-        
+
         {isLoading ? (
-                    <div className="flex justify-center items-center h-64">
+          <div className="flex justify-center items-center h-64">
             <div className="flex flex-col items-center gap-4">
               <Loader className="w-8 h-8 animate-spin text-blue-600" />
               <p className="text-gray-600">Carregando dados do dashboard...</p>
             </div>
-          </div>):(
-                   <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-blue-600" />
-              Docas/Rotas
-            </h3>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-blue-600" />
+                Docas/Rotas
+              </h3>
 
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-500">
-                Página {currentPage + 1} de{" "}
-                {Math.ceil(docasFiltradas.length / itemsPerPage)}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleScroll("left")}
-                  disabled={currentPage === 0}
-                  className={`p-2 border border-gray-300 rounded-lg ${currentPage === 0 ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"}`}
-                  aria-label="Anterior"
-                >
-                  <ChevronLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <button
-                  onClick={() => handleScroll("right")}
-                  disabled={
-                    currentPage ===
-                    Math.ceil(docasFiltradas.length / itemsPerPage) - 1
-                  }
-                  className={`p-2 border border-gray-300 rounded-lg ${currentPage === Math.ceil(docasFiltradas.length / itemsPerPage) - 1 ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"}`}
-                  aria-label="Próximo"
-                >
-                  <ChevronRight className="w-5 h-5 text-gray-600" />
-                </button>
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-gray-500">
+                  Página {currentPage + 1} de{" "}
+                  {Math.ceil(docasFiltradas.length / itemsPerPage)}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleScroll("left")}
+                    disabled={currentPage === 0}
+                    className={`p-2 border border-gray-300 rounded-lg ${currentPage === 0 ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"}`}
+                    aria-label="Anterior"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-gray-600" />
+                  </button>
+                  <button
+                    onClick={() => handleScroll("right")}
+                    disabled={
+                      currentPage ===
+                      Math.ceil(docasFiltradas.length / itemsPerPage) - 1
+                    }
+                    className={`p-2 border border-gray-300 rounded-lg ${currentPage === Math.ceil(docasFiltradas.length / itemsPerPage) - 1 ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"}`}
+                    aria-label="Próximo"
+                  >
+                    <ChevronRight className="w-5 h-5 text-gray-600" />
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Botões de Modo de Visualização */}
-          <div className="flex gap-4 mb-6">
-            <button
-              onClick={() => {
-                setViewMode("em_uso");
-                setCurrentPage(0);
-              }}
-              className={`flex-1 py-3 px-4 rounded-lg border flex flex-col items-center justify-center ${viewMode === "em_uso" ? "bg-orange-50 border-orange-300 text-orange-700 font-medium" : "bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100"}`}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <Truck className="w-5 h-5" />
-                <span className="text-lg">Docas em Uso</span>
-              </div>
-              <span className="text-sm">
-                {todasDocas.filter((d) => d.status === "ocupada").length} docas
-                ocupadas
-              </span>
-            </button>
-
-            <button
-              onClick={() => {
-                setViewMode("liberadas");
-                setCurrentPage(0);
-              }}
-              className={`flex-1 py-3 px-4 rounded-lg border flex flex-col items-center justify-center ${viewMode === "liberadas" ? "bg-green-50 border-green-300 text-green-700 font-medium" : "bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100"}`}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <CheckCircle className="w-5 h-5" />
-                <span className="text-lg">Rotas Liberadas</span>
-              </div>
-              <span className="text-sm">
-                {todasDocas.filter((d) => d.status === "liberada").length} rotas
-                liberadas
-              </span>
-            </button>
-          </div>
-
-          {/* Carrossel de Docas */}
-          <div className="relative">
-            {docasFiltradas.length === 0 ? (
-              <div
-                className={`p-8 rounded-lg border ${getBorderColor()} ${getBgColor()} text-center`}
+            {/* Botões de Modo de Visualização */}
+            <div className="flex gap-4 mb-6">
+              <button
+                onClick={() => {
+                  setViewMode("em_uso");
+                  setCurrentPage(0);
+                }}
+                className={`flex-1 py-3 px-4 rounded-lg border flex flex-col items-center justify-center ${viewMode === "em_uso" ? "bg-orange-50 border-orange-300 text-orange-700 font-medium" : "bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100"}`}
               >
-                <div className="text-gray-500 mb-2">
-                  {viewMode === "em_uso" ? (
-                    <Truck className="w-12 h-12 mx-auto mb-3 text-orange-300" />
-                  ) : (
-                    <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-300" />
+                <div className="flex items-center gap-2 mb-1">
+                  <Truck className="w-5 h-5" />
+                  <span className="text-lg">Docas em Uso</span>
+                </div>
+                <span className="text-sm">
+                  {todasDocas.filter((d) => d.status === "ocupada").length} docas
+                  ocupadas
+                </span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setViewMode("liberadas");
+                  setCurrentPage(0);
+                }}
+                className={`flex-1 py-3 px-4 rounded-lg border flex flex-col items-center justify-center ${viewMode === "liberadas" ? "bg-green-50 border-green-300 text-green-700 font-medium" : "bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100"}`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <CheckCircle className="w-5 h-5" />
+                  <span className="text-lg">Rotas Liberadas</span>
+                </div>
+                <span className="text-sm">
+                  {todasDocas.filter((d) => d.status === "liberada").length} rotas
+                  liberadas
+                </span>
+              </button>
+            </div>
+
+            {/* Carrossel de Docas */}
+            <div className="relative">
+              {docasFiltradas.length === 0 ? (
+                <div
+                  className={`p-8 rounded-lg border ${getBorderColor()} ${getBgColor()} text-center`}
+                >
+                  <div className="text-gray-500 mb-2">
+                    {viewMode === "em_uso" ? (
+                      <Truck className="w-12 h-12 mx-auto mb-3 text-orange-300" />
+                    ) : (
+                      <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-300" />
+                    )}
+                  </div>
+                  <h4 className={`font-bold text-lg mb-1 ${getTextColor()}`}>
+                    {viewMode === "em_uso"
+                      ? "Nenhuma doca em uso"
+                      : "Nenhuma rota liberada"}
+                  </h4>
+                  <p className="text-gray-600">
+                    {viewMode === "em_uso"
+                      ? "Todas as docas estão disponíveis ou em manutenção"
+                      : "Nenhuma rota foi liberada ainda hoje"}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Coluna Esquerda */}
+                    <div className="space-y-4">
+                      {colunaEsquerda.map((doca) => (
+                        <div
+                          key={doca.id}
+                          className={getCardStyle(doca)}
+                          onClick={() => {
+                            if (viewMode === "em_uso" && doca.status === "ocupada") {
+                              handleEditarCarregamento(doca);
+                            }
+                          }}
+                          title={viewMode === "em_uso" && doca.status === "ocupada" ? "Clique para editar/finalizar este carregamento" : ""}
+                        >
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`p-2 rounded-lg ${getBadgeColor()}`}
+                              >
+                                {viewMode === "em_uso" ? (
+                                  <Truck className="w-6 h-6" />
+                                ) : (
+                                  <CheckCircle className="w-6 h-6" />
+                                )}
+                              </div>
+                              <div>
+                                <div className="font-bold text-xl flex items-center gap-2">
+                                  Doca {doca.id}
+                                  {viewMode === "em_uso" && doca.status === "ocupada" && (
+                                    <Edit className="w-4 h-4 text-orange-500" />
+                                  )}
+                                </div>
+                                <div
+                                  className={`text-sm font-medium ${getTextColor()}`}
+                                >
+                                  {viewMode === "em_uso"
+                                    ? "Em Carregamento"
+                                    : "Rota Liberada"}
+                                </div>
+                              </div>
+                            </div>
+                            {doca.tipoVeiculo && (
+                              <span className="px-3 py-1 bg-white border rounded-full text-xs font-medium">
+                                {doca.tipoVeiculo}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="space-y-3">
+                            {/* Motorista */}
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                                <Users className="w-4 h-4 text-gray-500" />
+                              </div>
+                              <div>
+                                <div className="text-xs text-gray-500">
+                                  Motorista
+                                </div>
+                                <div className="font-medium">
+                                  {doca.motorista}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Destino */}
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                                <MapPin className="w-4 h-4 text-gray-500" />
+                              </div>
+                              <div>
+                                <div className="text-xs text-gray-500">
+                                  Destino
+                                </div>
+                                <div className="font-medium">
+                                  {doca.cidadeDestino}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Placa */}
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                                <Car className="w-4 h-4 text-gray-500" />
+                              </div>
+                              <div>
+                                <div className="text-xs text-gray-500">
+                                  Placa do Veículo
+                                </div>
+                                <div className="font-medium font-mono">
+                                  {doca.placaVeiculo}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Carga */}
+                            {doca.carga && (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                <div className="text-xs text-gray-500 mb-2">
+                                  Carga
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div className="text-center">
+                                    <div className="font-bold">{doca.carga.gaiolas}</div>
+                                    <div className="text-xs text-gray-500">Gaiolas</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="font-bold">{doca.carga.volumosos}</div>
+                                    <div className="text-xs text-gray-500">Volumosos</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="font-bold">{doca.carga.mangaPallets}</div>
+                                    <div className="text-xs text-gray-500">Manga Pallets</div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Horário se disponível */}
+                            {viewMode === "liberadas" && doca.horarioSaida && (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                <div className="text-xs text-gray-500">
+                                  Horário de Saída
+                                </div>
+                                <div className="font-medium">
+                                  {doca.horarioSaida}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Botão de ação para docas em uso */}
+                            {viewMode === "em_uso" && doca.status === "ocupada" && (
+                              <div className="mt-4 pt-4 border-t border-gray-200">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditarCarregamento(doca);
+                                  }}
+                                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                  Editar/Finalizar Carregamento
+                                </button>
+                                <p className="text-xs text-gray-500 mt-1 text-center">
+                                  Clique no card ou botão para editar
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Coluna Direita */}
+                    <div className="space-y-4">
+                      {colunaDireita.map((doca) => (
+                        <div
+                          key={doca.id}
+                          className={getCardStyle(doca)}
+                          onClick={() => {
+                            if (viewMode === "em_uso" && doca.status === "ocupada") {
+                              handleEditarCarregamento(doca);
+                            }
+                          }}
+                          title={viewMode === "em_uso" && doca.status === "ocupada" ? "Clique para editar/finalizar este carregamento" : ""}
+                        >
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`p-2 rounded-lg ${getBadgeColor()}`}
+                              >
+                                {viewMode === "em_uso" ? (
+                                  <Truck className="w-6 h-6" />
+                                ) : (
+                                  <CheckCircle className="w-6 h-6" />
+                                )}
+                              </div>
+                              <div>
+                                <div className="font-bold text-xl flex items-center gap-2">
+                                  Doca {doca.id}
+                                  {viewMode === "em_uso" && doca.status === "ocupada" && (
+                                    <Edit className="w-4 h-4 text-orange-500" />
+                                  )}
+                                </div>
+                                <div
+                                  className={`text-sm font-medium ${getTextColor()}`}
+                                >
+                                  {viewMode === "em_uso"
+                                    ? "Em Carregamento"
+                                    : "Rota Liberada"}
+                                </div>
+                              </div>
+                            </div>
+                            {doca.tipoVeiculo && (
+                              <span className="px-3 py-1 bg-white border rounded-full text-xs font-medium">
+                                {doca.tipoVeiculo}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="space-y-3">
+                            {/* Motorista */}
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                                <Users className="w-4 h-4 text-gray-500" />
+                              </div>
+                              <div>
+                                <div className="text-xs text-gray-500">
+                                  Motorista
+                                </div>
+                                <div className="font-medium">
+                                  {doca.motorista}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Destino */}
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                                <MapPin className="w-4 h-4 text-gray-500" />
+                              </div>
+                              <div>
+                                <div className="text-xs text-gray-500">
+                                  Destino
+                                </div>
+                                <div className="font-medium">
+                                  {doca.cidadeDestino}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Placa */}
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                                <Car className="w-4 h-4 text-gray-500" />
+                              </div>
+                              <div>
+                                <div className="text-xs text-gray-500">
+                                  Placa do Veículo
+                                </div>
+                                <div className="font-medium font-mono">
+                                  {doca.placaVeiculo}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Carga */}
+                            {doca.carga && (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                <div className="text-xs text-gray-500 mb-2">
+                                  Carga
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div className="text-center">
+                                    <div className="font-bold">{doca.carga.gaiolas}</div>
+                                    <div className="text-xs text-gray-500">Gaiolas</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="font-bold">{doca.carga.volumosos}</div>
+                                    <div className="text-xs text-gray-500">Volumosos</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="font-bold">{doca.carga.mangaPallets}</div>
+                                    <div className="text-xs text-gray-500">Manga Pallets</div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Horário se disponível */}
+                            {viewMode === "liberadas" && doca.horarioSaida && (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                <div className="text-xs text-gray-500">
+                                  Horário de Saída
+                                </div>
+                                <div className="font-medium">
+                                  {doca.horarioSaida}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Botão de ação para docas em uso */}
+                            {viewMode === "em_uso" && doca.status === "ocupada" && (
+                              <div className="mt-4 pt-4 border-t border-gray-200">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditarCarregamento(doca);
+                                  }}
+                                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                  Editar/Finalizar Carregamento
+                                </button>
+                                <p className="text-xs text-gray-500 mt-1 text-center">
+                                  Clique no card ou botão para editar
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Indicadores de página */}
+                  {Math.ceil(docasFiltradas.length / itemsPerPage) > 1 && (
+                    <div className="flex justify-center gap-2 mt-6">
+                      {Array.from({
+                        length: Math.ceil(docasFiltradas.length / itemsPerPage),
+                      }).map((_, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setCurrentPage(index)}
+                          className={`w-3 h-3 rounded-full ${currentPage === index ? getTextColor().replace("text-", "bg-") : "bg-gray-300"}`}
+                          aria-label={`Ir para página ${index + 1}`}
+                        />
+                      ))}
+                    </div>
                   )}
-                </div>
-                <h4 className={`font-bold text-lg mb-1 ${getTextColor()}`}>
+                </>
+              )}
+            </div>
+
+            {/* Resumo */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="flex flex-wrap justify-between items-center">
+                <div className={`text-sm font-medium ${getTextColor()}`}>
                   {viewMode === "em_uso"
-                    ? "Nenhuma doca em uso"
-                    : "Nenhuma rota liberada"}
-                </h4>
-                <p className="text-gray-600">
-                  {viewMode === "em_uso"
-                    ? "Todas as docas estão disponíveis ou em manutenção"
-                    : "Nenhuma rota foi liberada ainda hoje"}
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Coluna Esquerda */}
-                  <div className="space-y-4">
-                    {colunaEsquerda.map((doca) => (
-                      <div
-                        key={doca.id}
-                        className={`p-4 border rounded-lg transition-all duration-300 ${getBorderColor()} ${getBgColor()}`}
-                      >
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`p-2 rounded-lg ${getBadgeColor()}`}
-                            >
-                              {viewMode === "em_uso" ? (
-                                <Truck className="w-6 h-6" />
-                              ) : (
-                                <CheckCircle className="w-6 h-6" />
-                              )}
-                            </div>
-                            <div>
-                              <div className="font-bold text-xl">
-                                Doca {doca.id}
-                              </div>
-                              <div
-                                className={`text-sm font-medium ${getTextColor()}`}
-                              >
-                                {viewMode === "em_uso"
-                                  ? "Em Carregamento"
-                                  : "Rota Liberada"}
-                              </div>
-                            </div>
-                          </div>
-                          {doca.tipoVeiculo && (
-                            <span className="px-3 py-1 bg-white border rounded-full text-xs font-medium">
-                              {doca.tipoVeiculo}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="space-y-3">
-                          {/* Motorista */}
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                              <Users className="w-4 h-4 text-gray-500" />
-                            </div>
-                            <div>
-                              <div className="text-xs text-gray-500">
-                                Motorista
-                              </div>
-                              <div className="font-medium">
-                                {doca.motorista}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Destino */}
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                              <MapPin className="w-4 h-4 text-gray-500" />
-                            </div>
-                            <div>
-                              <div className="text-xs text-gray-500">
-                                Destino
-                              </div>
-                              <div className="font-medium">
-                                {doca.cidadeDestino}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Placa */}
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                              <Car className="w-4 h-4 text-gray-500" />
-                            </div>
-                            <div>
-                              <div className="text-xs text-gray-500">
-                                Placa do Veículo
-                              </div>
-                              <div className="font-medium font-mono">
-                                {doca.placaVeiculo}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Horário se disponível */}
-                          {viewMode === "liberadas" && doca.horarioSaida && (
-                            <div className="mt-3 pt-3 border-t border-gray-200">
-                              <div className="text-xs text-gray-500">
-                                Horário de Saída
-                              </div>
-                              <div className="font-medium">
-                                {doca.horarioSaida}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Coluna Direita */}
-                  <div className="space-y-4">
-                    {colunaDireita.map((doca) => (
-                      <div
-                        key={doca.id}
-                        className={`p-4 border rounded-lg transition-all duration-300 ${getBorderColor()} ${getBgColor()}`}
-                      >
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`p-2 rounded-lg ${getBadgeColor()}`}
-                            >
-                              {viewMode === "em_uso" ? (
-                                <Truck className="w-6 h-6" />
-                              ) : (
-                                <CheckCircle className="w-6 h-6" />
-                              )}
-                            </div>
-                            <div>
-                              <div className="font-bold text-xl">
-                                Doca {doca.id}
-                              </div>
-                              <div
-                                className={`text-sm font-medium ${getTextColor()}`}
-                              >
-                                {viewMode === "em_uso"
-                                  ? "Em Carregamento"
-                                  : "Rota Liberada"}
-                              </div>
-                            </div>
-                          </div>
-                          {doca.tipoVeiculo && (
-                            <span className="px-3 py-1 bg-white border rounded-full text-xs font-medium">
-                              {doca.tipoVeiculo}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="space-y-3">
-                          {/* Motorista */}
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                              <Users className="w-4 h-4 text-gray-500" />
-                            </div>
-                            <div>
-                              <div className="text-xs text-gray-500">
-                                Motorista
-                              </div>
-                              <div className="font-medium">
-                                {doca.motorista}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Destino */}
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                              <MapPin className="w-4 h-4 text-gray-500" />
-                            </div>
-                            <div>
-                              <div className="text-xs text-gray-500">
-                                Destino
-                              </div>
-                              <div className="font-medium">
-                                {doca.cidadeDestino}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Placa */}
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                              <Car className="w-4 h-4 text-gray-500" />
-                            </div>
-                            <div>
-                              <div className="text-xs text-gray-500">
-                                Placa do Veículo
-                              </div>
-                              <div className="font-medium font-mono">
-                                {doca.placaVeiculo}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Horário se disponível */}
-                          {viewMode === "liberadas" && doca.horarioSaida && (
-                            <div className="mt-3 pt-3 border-t border-gray-200">
-                              <div className="text-xs text-gray-500">
-                                Horário de Saída
-                              </div>
-                              <div className="font-medium">
-                                {doca.horarioSaida}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                    ? `Mostrando ${docasFiltradas.length} docas em uso (clique para editar)`
+                    : `Mostrando ${docasFiltradas.length} rotas liberadas`}
                 </div>
-
-                {/* Indicadores de página */}
-                {Math.ceil(docasFiltradas.length / itemsPerPage) > 1 && (
-                  <div className="flex justify-center gap-2 mt-6">
-                    {Array.from({
-                      length: Math.ceil(docasFiltradas.length / itemsPerPage),
-                    }).map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setCurrentPage(index)}
-                        className={`w-3 h-3 rounded-full ${currentPage === index ? getTextColor().replace("text-", "bg-") : "bg-gray-300"}`}
-                        aria-label={`Ir para página ${index + 1}`}
-                      />
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Resumo */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="flex flex-wrap justify-between items-center">
-              <div className={`text-sm font-medium ${getTextColor()}`}>
-                {viewMode === "em_uso"
-                  ? `Mostrando ${docasFiltradas.length} docas em uso`
-                  : `Mostrando ${docasFiltradas.length} rotas liberadas`}
-              </div>
-              <div className="text-sm text-gray-500">
-                Última atualização:{" "}
-                {new Date().toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+                <div className="text-sm text-gray-500">
+                  Última atualização:{" "}
+                  {new Date().toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-          )}
+        )}
       </div>
     </>
   );

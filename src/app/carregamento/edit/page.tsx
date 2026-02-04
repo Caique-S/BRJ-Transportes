@@ -1,4 +1,5 @@
-'use client';
+'use client'
+
 
 import { useState, useEffect } from "react";
 import {
@@ -11,15 +12,13 @@ import {
   Save,
   ChevronLeft,
   ChevronRight,
+  CheckCircle,
   TrendingUp,
   Loader2,
   ArrowLeft,
-  BarChart,
-  Database,
-  FileUp,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from 'react';
 
 interface CarregamentoInput {
   doca: number;
@@ -52,52 +51,8 @@ interface CarregamentoInput {
     mangaPallets: string;
   };
   observacoes?: string;
+  _id?: string;
 }
-
-interface CSVRecord {
-  ID?: string;
-  "Nome do motorista principal"?: string;
-  "Tipo de veículo"?: string;
-  "Veículo de tração"?: string;
-  "Veículo de carga"?: string;
-  Destino?: string;
-  [key: string]: any;
-}
-
-interface UploadData {
-  _id: string;
-  fileName: string;
-  uploadDate: string;
-  data: CSVRecord[];
-  totalRecords: number;
-  processedRecords: number;
-}
-
-// Mapeamento de códigos para cidades
-const CODIGO_PARA_CIDADE: { [key: string]: string } = {
-  "EBA14": "Serrinha - BA",
-  "EBA99": "Valença - BA",
-  "EBA4": "Santo Antônio de Jesus - BA",
-  "EBA19": "Itaberaba - BA",
-  "EBA3": "Jacobina - BA",
-  "EBA2": "PombaL - BA",
-  "EBA16": "Senhor do Bonfim - BA",
-  "EBA21": "Seabra - BA",
-  "EBA6": "Juazeiro - BA",
-};
-
-// Mapeamento inverso (cidade para código)
-const CIDADE_PARA_CODIGO: { [key: string]: string } = {
-  "Serrinha - BA": "EBA14",
-  "Valença - BA": "EBA99",
-  "Santo Antônio de Jesus - BA": "EBA4",
-  "Itaberaba - BA": "EBA19",
-  "Jacobina - BA": "EBA3",
-  "PombaL - BA": "EBA2",
-  "Senhor do Bonfim - BA": "EBA16",
-  "Seabra - BA": "EBA21",
-  "Juazeiro - BA": "EBA6",
-};
 
 const calcularProgresso = (horarios: CarregamentoInput["horarios"]) => {
   if (!horarios)
@@ -124,7 +79,10 @@ const calcularProgresso = (horarios: CarregamentoInput["horarios"]) => {
       color: "bg-purple-500",
     };
   }
-  if (horarios.inicioCarregamento && horarios.inicioCarregamento.trim() !== "") {
+  if (
+    horarios.inicioCarregamento &&
+    horarios.inicioCarregamento.trim() !== ""
+  ) {
     return {
       porcentagem: 50,
       status: "carregando",
@@ -149,21 +107,20 @@ const calcularProgresso = (horarios: CarregamentoInput["horarios"]) => {
   };
 };
 
-export default function NovoCarregamento() {
+ function EditarCarregamentoContent() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const docaId = searchParams.get("id");
+  const docaNumero = searchParams.get("doca");
 
-  // Estados para os dados do CSV
-  const [latestUpload, setLatestUpload] = useState<UploadData | null>(null);
-  const [loadingUpload, setLoadingUpload] = useState(false);
 
-  // Estados para filtros
-  const [selectedCity, setSelectedCity] = useState<string>("");
-  const [filteredMotoristas, setFilteredMotoristas] = useState<CSVRecord[]>([]);
-  const [selectedMotorista, setSelectedMotorista] = useState<string>("");
+const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const [carregamento, setCarregamento] = useState<CarregamentoInput>({
-    doca: 1,
+    doca: Number(docaNumero) || 1,
     cidadeDestino: "",
     sequenciaCarro: 1,
     motorista: {
@@ -177,7 +134,7 @@ export default function NovoCarregamento() {
       bau: "",
     },
     horarios: {
-      encostouDoca: new Date().toLocaleTimeString('pt-BR', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+      encostouDoca: "",
       inicioCarregamento: "",
       fimCarregamento: "",
       liberacao: "",
@@ -192,111 +149,87 @@ export default function NovoCarregamento() {
       volumosos: "",
       mangaPallets: "",
     },
+    observacoes: "",
   });
 
   const [selectCarro, setSelectCarro] = useState<number>(1);
-  const cidades = Object.values(CODIGO_PARA_CIDADE);
 
-  // Buscar o upload mais recente
+  const cidades = [
+    "Juazeiro - BA",
+    "Santo Antônio de Jesus - BA",
+    "Itaberaba - BA",
+    "Seabra - BA",
+    "Valença - BA",
+    "Jacobina - BA",
+    "Serrinha - BA",
+    "Pombal - BA",
+    "Bonfim - BA",
+  ];
+
+  // Carregar dados do carregamento existente
   useEffect(() => {
-    fetchLatestUpload();
-  }, []);
-
-  const fetchLatestUpload = async () => {
-    try {
-      setLoadingUpload(true);
-      const response = await fetch('/api/upload?limit=1');
-
-      if (!response.ok) return;
-
-      const data = await response.json();
-
-      if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-        setLatestUpload(data.data[0]);
+    const carregarDados = async () => {
+      if (!docaId) {
+        setError("ID do carregamento não encontrado");
+        setIsLoading(false);
+        return;
       }
-    } catch (error) {
-      console.error('Erro ao buscar upload:', error);
-    } finally {
-      setLoadingUpload(false);
-    }
-  };
 
-  // Quando a cidade é selecionada, filtrar motoristas
-  useEffect(() => {
-    if (selectedCity && latestUpload?.data) {
-      const codigoDestino = CIDADE_PARA_CODIGO[selectedCity];
+      try {
+        console.log("o Doca ID: " + docaId);
+        const response = await fetch(`/api/carregamentos/${docaId}`);
+        if (!response.ok) {
+          throw new Error("Erro ao carregar dados do carregamento");
+        }
 
-      if (codigoDestino) {
-        // Filtrar motoristas pelo código de destino
-        const motoristas = latestUpload.data.filter(record => {
-          return record.Destino === codigoDestino;
+        const data = await response.json();
+
+        // Preencher formulário com dados existentes
+        setCarregamento({
+          doca: data.doca || 1,
+          cidadeDestino: data.cidadeDestino || "",
+          sequenciaCarro: data.sequenciaCarro || 1,
+          motorista: {
+            nome: data.motorista?.nome || "",
+            cpf: data.motorista?.cpf || "",
+          },
+          tipoVeiculo: data.tipoVeiculo || "3/4",
+          placas: {
+            placaSimples: data.placas?.placaSimples || "",
+            cavaloMecanico: data.placas?.cavaloMecanico || "",
+            bau: data.placas?.bau || "",
+          },
+          horarios: {
+            encostouDoca: data.horarios?.encostouDoca || "",
+            inicioCarregamento: data.horarios?.inicioCarregamento || "",
+            fimCarregamento: data.horarios?.fimCarregamento || "",
+            liberacao: data.horarios?.liberacao || "",
+          },
+          lacres: {
+            traseiro: data.lacres?.traseiro || "",
+            lateralEsquerdo: data.lacres?.lateralEsquerdo || "",
+            lateralDireito: data.lacres?.lateralDireito || "",
+          },
+          cargas: {
+            gaiolas: data.cargas?.gaiolas || "",
+            volumosos: data.cargas?.volumosos || "",
+            mangaPallets: data.cargas?.mangaPallets || "",
+          },
+          observacoes: data.observacoes || "",
+          _id: data._id,
         });
 
-        setFilteredMotoristas(motoristas);
-      } else {
-        setFilteredMotoristas([]);
+        setSelectCarro(data.sequenciaCarro || 1);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+        setError("Erro ao carregar dados do carregamento");
+        setIsLoading(false);
       }
+    };
 
-      // Resetar motorista selecionado
-      setSelectedMotorista("");
-      // Resetar campos do motorista
-      setCarregamento(prev => ({
-        ...prev,
-        motorista: { nome: "", cpf: "" },
-        tipoVeiculo: "3/4",
-        placas: { placaSimples: "", cavaloMecanico: "", bau: "" }
-      }));
-    } else {
-      setFilteredMotoristas([]);
-      setSelectedMotorista("");
-    }
-  }, [selectedCity, latestUpload]);
-
-  // Quando um motorista é selecionado, preencher os campos
-  useEffect(() => {
-    if (selectedMotorista && filteredMotoristas.length > 0) {
-      const motorista = filteredMotoristas.find(m =>
-        m["Nome do motorista principal"] === selectedMotorista
-      );
-
-      if (motorista) {
-        // Preencher motorista
-        updateMotorista("nome", motorista["Nome do motorista principal"] || "");
-        updateMotorista("cpf", motorista["Travel ID"] || "");
-
-        // Mapear tipo de veículo
-        let tipoVeiculo: "3/4" | "TOCO" | "TRUCK" | "CARROCERIA" = "3/4";
-        if (motorista["Tipo de veículo"]) {
-          const tipo = motorista["Tipo de veículo"];
-          if (tipo.includes("Médio") || tipo.includes("3/4")) {
-            tipoVeiculo = "3/4";
-          } else if (tipo.includes("Truck")) {
-            tipoVeiculo = "TRUCK";
-          } else if (tipo.includes("Toco")) {
-            tipoVeiculo = "TOCO";
-          } else if (tipo.includes("Carreta") || tipo.includes("carroceria")) {
-            tipoVeiculo = "CARROCERIA";
-          }
-        }
-        updateCarregamento("tipoVeiculo", tipoVeiculo);
-
-        // Preencher placas
-        if (motorista["Veículo de tração"]) {
-          if (tipoVeiculo === "CARROCERIA") {
-            updatePlacas("cavaloMecanico", motorista["Veículo de tração"]);
-            if (motorista["Veiculo de carga"]) {
-              updatePlacas("bau", motorista["Veiculo de carga"]);
-            }
-          } else {
-            updatePlacas("placaSimples", motorista["Veículo de tração"]);
-          }
-        }
-
-        // Atualizar cidade destino
-        updateCarregamento("cidadeDestino", selectedCity);
-      }
-    }
-  }, [selectedMotorista, filteredMotoristas, selectedCity]);
+    carregarDados();
+  }, [docaId]);
 
   const updateCarregamento = (field: keyof CarregamentoInput, value: any) => {
     setCarregamento((prev) => ({
@@ -348,7 +281,7 @@ export default function NovoCarregamento() {
     field: keyof CarregamentoInput["lacres"],
     value: string,
   ) => {
-    const numericValue = value.replace(/\D/g, '').slice(0, 7)
+    const numericValue = value.replace(/\D/g, '').slice(0, 7);
     setCarregamento((prev) => ({
       ...prev,
       lacres: {
@@ -389,6 +322,20 @@ export default function NovoCarregamento() {
     }
   };
 
+  const verificarCamposObrigatorios = () => {
+    const horarios = carregamento.horarios;
+    return (
+      horarios.encostouDoca &&
+      horarios.encostouDoca.trim() !== "" &&
+      horarios.inicioCarregamento &&
+      horarios.inicioCarregamento.trim() !== "" &&
+      horarios.fimCarregamento &&
+      horarios.fimCarregamento.trim() !== "" &&
+      horarios.liberacao &&
+      horarios.liberacao.trim() !== ""
+    );
+  };
+
   const prepararDadosParaAPI = () => {
     const dados = {
       doca: carregamento.doca,
@@ -418,11 +365,12 @@ export default function NovoCarregamento() {
         lateralDireito: carregamento.lacres.lateralDireito || "",
       },
       cargas: {
-        gaiolas: parseInt(carregamento.cargas.gaiolas),
-        volumosos: parseInt(carregamento.cargas.volumosos),
-        mangaPallets: parseInt(carregamento.cargas.mangaPallets),
+        gaiolas: carregamento.cargas.gaiolas,
+        volumosos: carregamento.cargas.volumosos,
+        mangaPallets: carregamento.cargas.mangaPallets,
       },
       status: "em_uso",
+      observacoes: carregamento.observacoes || "",
     };
 
     if (carregamento.tipoVeiculo !== "CARROCERIA") {
@@ -433,40 +381,42 @@ export default function NovoCarregamento() {
     return dados;
   };
 
-  const handleSubmit = async () => {
+  const handleSalvar = async () => {
     try {
-      setIsLoading(true);
+      setIsSaving(true);
+      setError("");
+      setSuccess("");
 
       if (!carregamento.cidadeDestino) {
-        alert("Selecione uma cidade de destino");
-        setIsLoading(false);
+        setError("Selecione uma cidade de destino");
+        setIsSaving(false);
         return;
       }
 
       if (!carregamento.motorista.nome) {
-        alert("Informe o nome do motorista");
-        setIsLoading(false);
+        setError("Informe o nome do motorista");
+        setIsSaving(false);
         return;
       }
 
       if (carregamento.tipoVeiculo === "CARROCERIA") {
         if (!carregamento.placas.cavaloMecanico || !carregamento.placas.bau) {
-          alert("Para Carreta, informe o Cavalo mecânico e o Baú");
-          setIsLoading(false);
+          setError("Para carroceria, informe o cavalo mecânico e o baú");
+          setIsSaving(false);
           return;
         }
       } else {
         if (!carregamento.placas.placaSimples) {
-          alert(`Informe a placa do ${carregamento.tipoVeiculo}`);
-          setIsLoading(false);
+          setError(`Informe a placa do ${carregamento.tipoVeiculo}`);
+          setIsSaving(false);
           return;
         }
       }
 
       const dadosParaAPI = prepararDadosParaAPI();
 
-      const response = await fetch("/api/carregamentos", {
-        method: "POST",
+      const response = await fetch(`/api/carregamentos/${docaId}`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
@@ -476,111 +426,125 @@ export default function NovoCarregamento() {
       const data = await response.json();
 
       if (response.ok) {
-        router.push("/carregamento/dashboard");
-        router.refresh();
+        setSuccess("Carregamento atualizado com sucesso!");
+        setTimeout(() => {
+          router.push("/carregamento/dashboard");
+          router.refresh();
+        }, 1500);
       } else {
-        throw new Error(data.error || "Erro ao salvar carregamento");
+        throw new Error(data.error || "Erro ao atualizar carregamento");
       }
     } catch (error: any) {
       console.error("Erro:", error);
-      alert(`Erro ao salvar carregamento: ${error.message}`);
+      setError(`Erro ao salvar carregamento: ${error.message}`);
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
+    }
+  };
+
+  const handleFinalizar = async () => {
+    try {
+      setIsSaving(true);
+      setError("");
+      setSuccess("");
+
+      if (!verificarCamposObrigatorios()) {
+        setError("Preencha todos os horários para finalizar o carregamento");
+        setIsSaving(false);
+        return;
+      }
+
+      const dadosParaAPI = {
+        ...prepararDadosParaAPI(),
+        status: "liberada",
+      };
+
+      const response = await fetch(`/api/carregamentos/${docaId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(dadosParaAPI),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess("Carregamento finalizado com sucesso! Redirecionando...");
+        setTimeout(() => {
+          router.push("/carregamento/dashboard");
+          router.refresh();
+        }, 1500);
+      } else {
+        throw new Error(data.error || "Erro ao finalizar carregamento");
+      }
+    } catch (error: any) {
+      console.error("Erro:", error);
+      setError(`Erro ao finalizar carregamento: ${error.message}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const progresso = calcularProgresso(carregamento.horarios);
 
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto mt-20 p-4">
+        <div className="flex justify-center items-center h-64">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <p className="text-gray-600">Carregando dados do carregamento...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto mt-20 p-4">
-      {/* Botões de navegação no topo */}
-      <div className="mb-8">
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex items-center space-x-4">
-            <Link href="/" className="flex items-center text-gray-600 hover:text-gray-900">
-              <ArrowLeft className="w-5 h-5 mr-1" />
-              Voltar
-            </Link>
-            <div className="h-6 w-px bg-gray-300"></div>
-
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.back()}
+            className="p-2 hover:bg-gray-100 rounded-lg"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Truck className="text-blue-600" />
+              Editar Carregamento - Doca {carregamento.doca}
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Edite ou finalize o carregamento da doca {carregamento.doca}
+            </p>
           </div>
-
-          <Link href="/carregamento/dashboard" className="flex items-center text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-2 rounded-lg">
-            <BarChart className="w-4 h-4 mr-2" />
-            Dashboard
-          </Link>
         </div>
       </div>
 
-
-
-
-      {/* Card de Upload - Mantido visualmente como antes, mas simplificado */}
-      <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-        <div className="flex items-center mb-4">
-          <Database className="w-5 h-5 text-gray-600 mr-2" />
-          <h2 className="text-lg font-semibold text-gray-800">
-            Dados do CSV
-          </h2>
-        </div>
-
-        {loadingUpload ? (
-          <div className="text-center py-4">
-            <Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-600" />
-            <p className="text-sm text-gray-600 mt-2">Carregando dados...</p>
-          </div>
-        ) : !latestUpload ? (
-          <div className="text-center py-4 border-2 border-dashed border-gray-300 rounded-lg">
-            <p className="text-gray-600">Nenhum arquivo CSV encontrado</p>
-            <p className="text-sm text-gray-500 mt-1">
-              Faça upload de um arquivo CSV para habilitar o preenchimento automático
-            </p>
-          </div>
-        ) : (
-          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center">
-                <FileUp className="h-5 w-5 text-green-600 mr-2" />
-                <div>
-                  <h3 className="font-medium text-gray-900">
-                    {latestUpload.fileName}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Upload: {new Date(latestUpload.uploadDate).toLocaleString('pt-BR')}
-                  </p>
-                </div>
-              </div>
-              <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
-                {latestUpload.totalRecords} registros
-              </span>
-            </div>
-            <p className="text-sm text-gray-500 mt-2">
-              {latestUpload.processedRecords} registro(s) disponível(is) para esta Facility
-            </p>
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+            <strong>Erro:</strong> {error}
           </div>
         )}
-      </div>
 
-      {/* Formulário principal */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        {/* Doca e Cidade */}
+        {success && (
+          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4">
+            <strong>Sucesso:</strong> {success}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <MapPin className="inline w-4 h-4 mr-1" />
               Doca
             </label>
-            <select
-              className="w-full p-3 border border-gray-300 rounded-lg"
-              value={carregamento.doca}
-              onChange={(e) => updateCarregamento("doca", parseInt(e.target.value))}
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map((doca) => (
-                <option key={doca} value={doca}>
-                  Doca {doca}
-                </option>
-              ))}
-            </select>
+            <div className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50">
+              Doca {carregamento.doca}
+            </div>
           </div>
 
           <div>
@@ -589,11 +553,10 @@ export default function NovoCarregamento() {
             </label>
             <select
               className="w-full p-3 border border-gray-300 rounded-lg"
-              value={selectedCity}
-              onChange={(e) => {
-                setSelectedCity(e.target.value);
-                updateCarregamento("cidadeDestino", e.target.value);
-              }}
+              value={carregamento.cidadeDestino}
+              onChange={(e) =>
+                updateCarregamento("cidadeDestino", e.target.value)
+              }
             >
               <option value="">Selecione a cidade</option>
               {cidades.map((cidade) => (
@@ -605,83 +568,6 @@ export default function NovoCarregamento() {
           </div>
         </div>
 
-        {/* Seleção de Motorista (após escolher cidade) */}
-        {selectedCity && (
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Motorista para {selectedCity}
-            </label>
-            <select
-              className="w-full p-3 border border-gray-300 rounded-lg"
-              value={selectedMotorista}
-              onChange={(e) => setSelectedMotorista(e.target.value)}
-            >
-              <option value="">Selecione um motorista...</option>
-              {filteredMotoristas.map((motorista, index) => (
-                <option
-                  key={index}
-                  value={motorista["Nome do motorista principal"] || ""}
-                >
-                  {motorista["Nome do motorista principal"]}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-gray-500 mt-1">
-              {filteredMotoristas.length} motorista(s) disponível(is) para {selectedCity}
-            </p>
-          </div>
-        )}
-
-        {/* Indicação de campos preenchidos */}
-        {selectedMotorista && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm font-medium text-green-800 mb-2">
-              ✓ Campos preenchidos automaticamente
-            </p>
-            <div className="grid grid-cols-2 gap-3 text-sm text-green-700">
-              <div>
-                <span className="font-medium">Motorista:</span> {carregamento.motorista.nome}
-              </div>
-              <div>
-                <span className="font-medium">ID:</span> {carregamento.motorista.cpf}
-              </div>
-              <div>
-                <span className="font-medium">Tipo de Veículo:</span> {carregamento.tipoVeiculo}
-              </div>
-              <div>
-                <span className="font-medium">Placa(s):</span> {carregamento.tipoVeiculo === "CARROCERIA"
-                  ? `${carregamento.placas.cavaloMecanico}/${carregamento.placas.bau}`
-                  : carregamento.placas.placaSimples}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Campos editáveis de motorista (se não selecionou do dropdown) */}
-        <div className="mb-6">
-          <label className="flex text-sm font-medium text-gray-700 mb-2 items-center">
-            <User className="w-4 h-4 mr-1" />
-            {selectedMotorista ? "Dados do Motorista" : "Informações do Motorista"}
-          </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input
-              type="text"
-              placeholder="Nome do motorista"
-              className="p-3 border border-gray-300 rounded-lg"
-              value={carregamento.motorista.nome}
-              onChange={(e) => updateMotorista("nome", e.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="ID/CPF"
-              className="p-3 border border-gray-300 rounded-lg"
-              value={carregamento.motorista.cpf || ""}
-              onChange={(e) => updateMotorista("cpf", e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Sequência do Carro */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Qual carro na sequência?
@@ -721,12 +607,34 @@ export default function NovoCarregamento() {
           </div>
         </div>
 
-        {/* Tipo de Veículo */}
+        <div className="mb-6">
+          <label className="flex text-sm font-medium text-gray-700 mb-2 items-center">
+            <User className="w-4 h-4 mr-1" />
+            Motorista
+          </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              type="text"
+              placeholder="Nome do motorista"
+              className="p-3 border border-gray-300 rounded-lg"
+              value={carregamento.motorista.nome}
+              onChange={(e) => updateMotorista("nome", e.target.value)}
+            />
+            <input
+              type="text"
+              placeholder="ID/CPF (opcional)"
+              className="p-3 border border-gray-300 rounded-lg"
+              value={carregamento.motorista.cpf || ""}
+              onChange={(e) => updateMotorista("cpf", e.target.value)}
+            />
+          </div>
+        </div>
+
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Tipo de Veículo
           </label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {[
               { value: "3/4", label: "3/4", desc: "1 placa" },
               { value: "TRUCK", label: "Truck", desc: "1 placa" },
@@ -746,7 +654,6 @@ export default function NovoCarregamento() {
           </div>
         </div>
 
-        {/* Placas do Veículo */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Placas do Veículo
@@ -787,7 +694,6 @@ export default function NovoCarregamento() {
           </div>
         </div>
 
-        {/* Horários */}
         <div className="mb-6">
           <h3 className="font-medium text-gray-700 mb-3 flex items-center">
             <Clock className="w-4 h-4 mr-2" />
@@ -845,7 +751,6 @@ export default function NovoCarregamento() {
           </div>
         </div>
 
-        {/* Progresso do Carregamento */}
         <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
           <h3 className="font-medium text-gray-700 mb-3 flex items-center">
             <TrendingUp className="w-4 h-4 mr-2" />
@@ -866,15 +771,16 @@ export default function NovoCarregamento() {
             </span>
           </div>
           <div className="mt-2 text-xs text-gray-500">
-            {progresso.porcentagem === 0 && "Preencha os horários para atualizar o progresso"}
+            {progresso.porcentagem === 0 &&
+              "Preencha os horários para atualizar o progresso"}
             {progresso.porcentagem === 25 && "Veículo encostou na doca"}
             {progresso.porcentagem === 50 && "Carregamento em andamento"}
-            {progresso.porcentagem === 75 && "Carregamento finalizado, aguardando liberação"}
+            {progresso.porcentagem === 75 &&
+              "Carregamento finalizado, aguardando liberação"}
             {progresso.porcentagem === 100 && "Veículo liberado!"}
           </div>
         </div>
 
-        {/* Lacres */}
         <div className="mb-6">
           <h3 className="font-medium text-gray-700 mb-3 flex items-center">
             <Lock className="w-4 h-4 mr-2" />
@@ -902,7 +808,9 @@ export default function NovoCarregamento() {
                 placeholder="Número do lacre"
                 className="w-full p-3 border border-gray-300 rounded-lg"
                 value={carregamento.lacres.lateralEsquerdo || ""}
-                onChange={(e) => updateLacres("lateralEsquerdo", e.target.value)}
+                onChange={(e) =>
+                  updateLacres("lateralEsquerdo", e.target.value)
+                }
               />
             </div>
             <div>
@@ -920,7 +828,6 @@ export default function NovoCarregamento() {
           </div>
         </div>
 
-        {/* Cargas */}
         <div className="mb-8">
           <h3 className="font-medium text-gray-700 mb-3 flex items-center">
             <Package className="w-4 h-4 mr-2" />
@@ -938,7 +845,7 @@ export default function NovoCarregamento() {
                 placeholder="0"
                 value={carregamento.cargas.gaiolas}
                 onChange={(e) =>
-                  updateCargas("gaiolas", e.target.value)
+                  updateCargas("gaiolas",e.target.value || "0")
                 }
               />
             </div>
@@ -948,12 +855,13 @@ export default function NovoCarregamento() {
               </label>
               <input
                 type="number"
+                inputMode="numeric"
                 min="0"
                 className="w-full p-3 border border-gray-300 rounded-lg"
                 placeholder="0"
                 value={carregamento.cargas.volumosos}
                 onChange={(e) =>
-                  updateCargas("volumosos", e.target.value)
+                  updateCargas("volumosos", e.target.value || "0")
                 }
               />
             </div>
@@ -963,26 +871,26 @@ export default function NovoCarregamento() {
               </label>
               <input
                 type="number"
+                inputMode="numeric"
                 min="0"
                 className="w-full p-3 border border-gray-300 rounded-lg"
                 placeholder="0"
                 value={carregamento.cargas.mangaPallets}
                 onChange={(e) =>
-                  updateCargas("mangaPallets",e.target.value)
+                  updateCargas("mangaPallets", e.target.value || "0")
                 }
               />
             </div>
           </div>
         </div>
 
-        {/* Botão Salvar */}
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-4">
           <button
             className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={handleSubmit}
-            disabled={isLoading}
+            onClick={handleSalvar}
+            disabled={isSaving}
           >
-            {isLoading ? (
+            {isSaving ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
                 Salvando...
@@ -990,12 +898,70 @@ export default function NovoCarregamento() {
             ) : (
               <>
                 <Save className="w-5 h-5" />
-                Salvar Carregamento
+                Salvar Alterações
+              </>
+            )}
+          </button>
+
+          <button
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
+              verificarCamposObrigatorios()
+                ? "bg-green-600 text-white hover:bg-green-700"
+                : "bg-gray-400 text-gray-200 cursor-not-allowed"
+            }`}
+            onClick={handleFinalizar}
+            disabled={isSaving || !verificarCamposObrigatorios()}
+            title={
+              !verificarCamposObrigatorios()
+                ? "Preencha todos os horários para finalizar"
+                : "Finalizar carregamento"
+            }
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Finalizando...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-5 h-5" />
+                Finalizar Carregamento
               </>
             )}
           </button>
         </div>
+
+        <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm text-gray-600">
+          <p className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+            <strong>Salvar Alterações:</strong> Salva as alterações sem
+            finalizar (pode editar depois)
+          </p>
+          <p className="flex items-center gap-2 mt-1">
+            <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+            <strong>Finalizar:</strong> Marca como concluído e muda para
+            "liberada" no dashboard
+          </p>
+        </div>
       </div>
     </div>
+  );
+
+ }
+
+ export default function EditarCarregamento() {
+  return (
+    <Suspense fallback={
+      <div className="max-w-4xl mx-auto mt-20 p-4">
+        <div className="flex justify-center items-center h-64">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <p className="text-gray-600">Carregando dados...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <EditarCarregamentoContent />
+    </Suspense>
   );
 }

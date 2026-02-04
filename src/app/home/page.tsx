@@ -462,13 +462,13 @@ export default function HomeDashboard() {
   };
 
   // ============================================
-  // EFFECT: Carregar dados iniciais
+  // Carregar dados iniciais
   // ============================================
   useEffect(() => {
     atualizarDados();
     
-    // Atualizar a cada 30 segundos
-    const interval = setInterval(atualizarDados, 30000);
+    // Atualizar a cada 60 segundos
+    const interval = setInterval(atualizarDados, 60000);
     
     return () => clearInterval(interval);
   }, []);
