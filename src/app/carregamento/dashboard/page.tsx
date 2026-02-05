@@ -21,10 +21,14 @@ import { useRouter } from "next/navigation";
 
 interface DocaStatus {
   id: number;
-  status: "ocupada" | "liberada"  | "disponivel";
+  status: "ocupada" | "liberada" | "disponivel";
   motorista?: string;
   cidadeDestino?: string;
-  placaVeiculo?: string;
+  placas?: {
+    cavaloMecanico?: string;
+    bau?: string;
+    placaSimples?: string;
+  };
   tipoVeiculo?: "3/4" | "TOCO" | "TRUCK" | "CARROCERIA";
   horarioEntrada?: string;
   horarioSaida?: string;
@@ -88,7 +92,7 @@ export default function DashboardAnalise() {
   const [todasDocas, setTodasDocas] = useState<DocaStatus[]>([]);
 
   const [currentPage, setCurrentPage] = useState(0);
-  const itemsPerPage = 4; // 2 colunas x 2 linhas = 4 docas por página
+  const itemsPerPage = 4;
 
   const periodos = [
     { value: "hoje", label: "Hoje" },
@@ -103,17 +107,27 @@ export default function DashboardAnalise() {
     setIsLoading(true);
 
     try {
+      console.log("Carregando dados para data:", selectedDate);
       const response = await fetch(`/api/dashboard?date=${selectedDate}`);
       if (!response.ok) {
-        throw new Error('Erro ao carregar dados');
+        throw new Error("Erro ao carregar dados");
       }
       const data = await response.json();
 
-      setStats(data.stats);
-      setTodasDocas(data.todasDocas);
+      if (data.success) {
+        setStats(data.stats);
+        setTodasDocas(data.todasDocas);
+        console.log("Dados carregados:", {
+          stats: data.stats,
+          total: data.totalRegistros,
+          docas: data.todasDocas.length,
+        });
+      } else {
+        throw new Error(data.error || "Erro na resposta da API");
+      }
     } catch (error) {
-      console.error('Erro ao carregar dados do dashboard:', error);
-      alert('Erro ao carregar dados. Tente novamente.');
+      console.error("Erro ao carregar dados do dashboard:", error);
+      alert("Erro ao carregar dados. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
@@ -165,43 +179,10 @@ export default function DashboardAnalise() {
     router.push("/carregamento/new");
   };
 
-  // NOVA FUNÇÃO: Editar carregamento da doca
+  // Função para editar carregamento
   const handleEditarCarregamento = (doca: DocaStatus) => {
     if (doca.status === "ocupada" && doca._id) {
-      // Redirecionar para a página de carregamento com os dados existentes
-      const carregamentoData = {
-        doca: doca.id,
-        cidadeDestino: doca.cidadeDestino || "",
-        motorista: {
-          nome: doca.motorista || "",
-          cpf: "",
-        },
-        tipoVeiculo: doca.tipoVeiculo || "3/4",
-        placas: {
-          placaSimples: doca.placaVeiculo || "",
-        },
-        horarios: doca.horarios || {
-          encostouDoca: doca.horarioEntrada || "",
-          inicioCarregamento: "",
-          fimCarregamento: "",
-          liberacao: "",
-        },
-        lacres: doca.lacres || {
-          traseiro: "",
-          lateralEsquerdo: "",
-          lateralDireito: "",
-        },
-        cargas: doca.carga || {
-          gaiolas: 0,
-          volumosos: 0,
-          mangaPallets: 0,
-        },
-        _id: doca._id,
-        isEditing: true,
-      };
-
-      // Salvar os dados no localStorage para a página de carregamento acessar
-      localStorage.setItem('carregamentoEditavel', JSON.stringify(carregamentoData));
+      // Redirecionar para a página de edição com o ID
       router.push(`/carregamento/edit?id=${doca._id}&doca=${doca.id}`);
     }
   };
@@ -245,15 +226,16 @@ export default function DashboardAnalise() {
       : "bg-green-100 text-green-800";
   };
 
-  // Estilo para card clicável
-  const getCardStyle = (doca: DocaStatus) => {
-    const baseStyle = `p-4 border rounded-lg transition-all duration-300 ${getBorderColor()} ${getBgColor()}`;
-
-    if (viewMode === "em_uso" && doca.status === "ocupada") {
-      return `${baseStyle} cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.99]`;
+  // Função para formatar a placa para exibição
+  const formatarPlaca = (doca: DocaStatus) => {
+    if (doca.tipoVeiculo === "CARROCERIA") {
+      let placa = doca.placas?.cavaloMecanico || "";
+      if (doca.placas?.bau) {
+        placa += ` / ${doca.placas.bau}`;
+      }
+      return placa;
     }
-
-    return baseStyle;
+    return doca.placas?.placaSimples || "";
   };
 
   return (
@@ -406,8 +388,8 @@ export default function DashboardAnalise() {
                   <span className="text-lg">Docas em Uso</span>
                 </div>
                 <span className="text-sm">
-                  {todasDocas.filter((d) => d.status === "ocupada").length} docas
-                  ocupadas
+                  {todasDocas.filter((d) => d.status === "ocupada").length}{" "}
+                  docas ocupadas
                 </span>
               </button>
 
@@ -423,8 +405,8 @@ export default function DashboardAnalise() {
                   <span className="text-lg">Rotas Liberadas</span>
                 </div>
                 <span className="text-sm">
-                  {todasDocas.filter((d) => d.status === "liberada").length} rotas
-                  liberadas
+                  {todasDocas.filter((d) => d.status === "liberada").length}{" "}
+                  rotas liberadas
                 </span>
               </button>
             </div>
@@ -461,13 +443,9 @@ export default function DashboardAnalise() {
                       {colunaEsquerda.map((doca) => (
                         <div
                           key={doca.id}
-                          className={getCardStyle(doca)}
-                          onClick={() => {
-                            if (viewMode === "em_uso" && doca.status === "ocupada") {
-                              handleEditarCarregamento(doca);
-                            }
-                          }}
-                          title={viewMode === "em_uso" && doca.status === "ocupada" ? "Clique para editar/finalizar este carregamento" : ""}
+                          className={`p-4 border rounded-lg transition-all duration-300 ${getBorderColor()} ${getBgColor()} cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.99]`}
+                          onClick={() => handleEditarCarregamento(doca)}
+                          title="Clique para editar/finalizar este carregamento"
                         >
                           <div className="flex justify-between items-start mb-3">
                             <div className="flex items-center gap-3">
@@ -483,9 +461,10 @@ export default function DashboardAnalise() {
                               <div>
                                 <div className="font-bold text-xl flex items-center gap-2">
                                   Doca {doca.id}
-                                  {viewMode === "em_uso" && doca.status === "ocupada" && (
-                                    <Edit className="w-4 h-4 text-orange-500" />
-                                  )}
+                                  {viewMode === "em_uso" &&
+                                    doca.status === "ocupada" && (
+                                      <Edit className="w-4 h-4 text-orange-500" />
+                                    )}
                                 </div>
                                 <div
                                   className={`text-sm font-medium ${getTextColor()}`}
@@ -514,7 +493,7 @@ export default function DashboardAnalise() {
                                   Motorista
                                 </div>
                                 <div className="font-medium">
-                                  {doca.motorista}
+                                  {doca.motorista || "N/A"}
                                 </div>
                               </div>
                             </div>
@@ -529,7 +508,7 @@ export default function DashboardAnalise() {
                                   Destino
                                 </div>
                                 <div className="font-medium">
-                                  {doca.cidadeDestino}
+                                  {doca.cidadeDestino || "N/A"}
                                 </div>
                               </div>
                             </div>
@@ -544,7 +523,7 @@ export default function DashboardAnalise() {
                                   Placa do Veículo
                                 </div>
                                 <div className="font-medium font-mono">
-                                  {doca.placaVeiculo}
+                                  {formatarPlaca(doca) || "N/A"}
                                 </div>
                               </div>
                             </div>
@@ -557,23 +536,35 @@ export default function DashboardAnalise() {
                                 </div>
                                 <div className="grid grid-cols-3 gap-2">
                                   <div className="text-center">
-                                    <div className="font-bold">{doca.carga.gaiolas}</div>
-                                    <div className="text-xs text-gray-500">Gaiolas</div>
+                                    <div className="font-bold">
+                                      {doca.carga.gaiolas}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      Gaiolas
+                                    </div>
                                   </div>
                                   <div className="text-center">
-                                    <div className="font-bold">{doca.carga.volumosos}</div>
-                                    <div className="text-xs text-gray-500">Volumosos</div>
+                                    <div className="font-bold">
+                                      {doca.carga.volumosos}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      Volumosos
+                                    </div>
                                   </div>
                                   <div className="text-center">
-                                    <div className="font-bold">{doca.carga.mangaPallets}</div>
-                                    <div className="text-xs text-gray-500">Manga Pallets</div>
+                                    <div className="font-bold">
+                                      {doca.carga.mangaPallets}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      Manga Pallets
+                                    </div>
                                   </div>
                                 </div>
                               </div>
                             )}
 
-                            {/* Horário se disponível */}
-                            {viewMode === "liberadas" && doca.horarioSaida && (
+                            {/* Horário de entrada/saída */}
+                            {viewMode === "liberadas" && doca.horarioSaida ? (
                               <div className="mt-3 pt-3 border-t border-gray-200">
                                 <div className="text-xs text-gray-500">
                                   Horário de Saída
@@ -582,26 +573,36 @@ export default function DashboardAnalise() {
                                   {doca.horarioSaida}
                                 </div>
                               </div>
-                            )}
+                            ) : viewMode === "em_uso" && doca.horarioEntrada ? (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                <div className="text-xs text-gray-500">
+                                  Entrada na Doca
+                                </div>
+                                <div className="font-medium">
+                                  {doca.horarioEntrada}
+                                </div>
+                              </div>
+                            ) : null}
 
                             {/* Botão de ação para docas em uso */}
-                            {viewMode === "em_uso" && doca.status === "ocupada" && (
-                              <div className="mt-4 pt-4 border-t border-gray-200">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditarCarregamento(doca);
-                                  }}
-                                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-                                >
-                                  <Edit className="w-4 h-4" />
-                                  Editar/Finalizar Carregamento
-                                </button>
-                                <p className="text-xs text-gray-500 mt-1 text-center">
-                                  Clique no card ou botão para editar
-                                </p>
-                              </div>
-                            )}
+                            {viewMode === "em_uso" &&
+                              doca.status === "ocupada" && (
+                                <div className="mt-4 pt-4 border-t border-gray-200">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditarCarregamento(doca);
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                    Editar/Finalizar Carregamento
+                                  </button>
+                                  <p className="text-xs text-gray-500 mt-1 text-center">
+                                    Clique no card ou botão para editar
+                                  </p>
+                                </div>
+                              )}
                           </div>
                         </div>
                       ))}
@@ -612,13 +613,9 @@ export default function DashboardAnalise() {
                       {colunaDireita.map((doca) => (
                         <div
                           key={doca.id}
-                          className={getCardStyle(doca)}
-                          onClick={() => {
-                            if (viewMode === "em_uso" && doca.status === "ocupada") {
-                              handleEditarCarregamento(doca);
-                            }
-                          }}
-                          title={viewMode === "em_uso" && doca.status === "ocupada" ? "Clique para editar/finalizar este carregamento" : ""}
+                          className={`p-4 border rounded-lg transition-all duration-300 ${getBorderColor()} ${getBgColor()} cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.99]`}
+                          onClick={() => handleEditarCarregamento(doca)}
+                          title="Clique para editar/finalizar este carregamento"
                         >
                           <div className="flex justify-between items-start mb-3">
                             <div className="flex items-center gap-3">
@@ -634,9 +631,10 @@ export default function DashboardAnalise() {
                               <div>
                                 <div className="font-bold text-xl flex items-center gap-2">
                                   Doca {doca.id}
-                                  {viewMode === "em_uso" && doca.status === "ocupada" && (
-                                    <Edit className="w-4 h-4 text-orange-500" />
-                                  )}
+                                  {viewMode === "em_uso" &&
+                                    doca.status === "ocupada" && (
+                                      <Edit className="w-4 h-4 text-orange-500" />
+                                    )}
                                 </div>
                                 <div
                                   className={`text-sm font-medium ${getTextColor()}`}
@@ -665,7 +663,7 @@ export default function DashboardAnalise() {
                                   Motorista
                                 </div>
                                 <div className="font-medium">
-                                  {doca.motorista}
+                                  {doca.motorista || "N/A"}
                                 </div>
                               </div>
                             </div>
@@ -680,7 +678,7 @@ export default function DashboardAnalise() {
                                   Destino
                                 </div>
                                 <div className="font-medium">
-                                  {doca.cidadeDestino}
+                                  {doca.cidadeDestino || "N/A"}
                                 </div>
                               </div>
                             </div>
@@ -695,7 +693,7 @@ export default function DashboardAnalise() {
                                   Placa do Veículo
                                 </div>
                                 <div className="font-medium font-mono">
-                                  {doca.placaVeiculo}
+                                  {formatarPlaca(doca) || "N/A"}
                                 </div>
                               </div>
                             </div>
@@ -708,23 +706,35 @@ export default function DashboardAnalise() {
                                 </div>
                                 <div className="grid grid-cols-3 gap-2">
                                   <div className="text-center">
-                                    <div className="font-bold">{doca.carga.gaiolas}</div>
-                                    <div className="text-xs text-gray-500">Gaiolas</div>
+                                    <div className="font-bold">
+                                      {doca.carga.gaiolas}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      Gaiolas
+                                    </div>
                                   </div>
                                   <div className="text-center">
-                                    <div className="font-bold">{doca.carga.volumosos}</div>
-                                    <div className="text-xs text-gray-500">Volumosos</div>
+                                    <div className="font-bold">
+                                      {doca.carga.volumosos}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      Volumosos
+                                    </div>
                                   </div>
                                   <div className="text-center">
-                                    <div className="font-bold">{doca.carga.mangaPallets}</div>
-                                    <div className="text-xs text-gray-500">Manga Pallets</div>
+                                    <div className="font-bold">
+                                      {doca.carga.mangaPallets}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      Manga Pallets
+                                    </div>
                                   </div>
                                 </div>
                               </div>
                             )}
 
-                            {/* Horário se disponível */}
-                            {viewMode === "liberadas" && doca.horarioSaida && (
+                            {/* Horário de entrada/saída */}
+                            {viewMode === "liberadas" && doca.horarioSaida ? (
                               <div className="mt-3 pt-3 border-t border-gray-200">
                                 <div className="text-xs text-gray-500">
                                   Horário de Saída
@@ -733,26 +743,36 @@ export default function DashboardAnalise() {
                                   {doca.horarioSaida}
                                 </div>
                               </div>
-                            )}
+                            ) : viewMode === "em_uso" && doca.horarioEntrada ? (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                <div className="text-xs text-gray-500">
+                                  Entrada na Doca
+                                </div>
+                                <div className="font-medium">
+                                  {doca.horarioEntrada}
+                                </div>
+                              </div>
+                            ) : null}
 
                             {/* Botão de ação para docas em uso */}
-                            {viewMode === "em_uso" && doca.status === "ocupada" && (
-                              <div className="mt-4 pt-4 border-t border-gray-200">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditarCarregamento(doca);
-                                  }}
-                                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-                                >
-                                  <Edit className="w-4 h-4" />
-                                  Editar/Finalizar Carregamento
-                                </button>
-                                <p className="text-xs text-gray-500 mt-1 text-center">
-                                  Clique no card ou botão para editar
-                                </p>
-                              </div>
-                            )}
+                            {viewMode === "em_uso" &&
+                              doca.status === "ocupada" && (
+                                <div className="mt-4 pt-4 border-t border-gray-200">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditarCarregamento(doca);
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                    Editar/Finalizar Carregamento
+                                  </button>
+                                  <p className="text-xs text-gray-500 mt-1 text-center">
+                                    Clique no card ou botão para editar
+                                  </p>
+                                </div>
+                              )}
                           </div>
                         </div>
                       ))}
@@ -797,6 +817,54 @@ export default function DashboardAnalise() {
             </div>
           </div>
         )}
+
+        {/* Estatísticas */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-blue-600" />
+            Estatísticas do Dia ({selectedDate})
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="text-2xl font-bold text-blue-700">
+                {stats.docasEmUso}
+              </div>
+              <div className="text-sm text-blue-600">Docas em Uso</div>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <div className="text-2xl font-bold text-green-700">
+                {stats.rotasLiberadas}
+              </div>
+              <div className="text-sm text-green-600">Rotas Liberadas</div>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div className="text-2xl font-bold text-gray-700">
+                {stats.docasDisponiveis}
+              </div>
+              <div className="text-sm text-gray-600">Docas Disponíveis</div>
+            </div>
+            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <div className="text-2xl font-bold text-purple-700">
+                {stats.tempoMedio}
+              </div>
+              <div className="text-sm text-purple-600">Tempo Médio</div>
+            </div>
+            <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <div className="text-2xl font-bold text-orange-700">
+                {stats.eficiencia}%
+              </div>
+              <div className="text-sm text-orange-600">Eficiência</div>
+            </div>
+            <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+              <div className="text-2xl font-bold text-indigo-700">
+                {stats.cargaTotal.gaiolas +
+                  stats.cargaTotal.volumosos +
+                  stats.cargaTotal.mangaPallets}
+              </div>
+              <div className="text-sm text-indigo-600">Total de Cargas</div>
+            </div>
+          </div>
+        </div>
       </div>
     </>
   );

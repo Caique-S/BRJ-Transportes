@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-const MONGODB_DB = process.env.MONGODB_DB || 'seubanco';
+const MONGODB_DB = process.env.MONGODB_DB || 'brj_transportes';
 const COLLECTION = 'carregamentos';
 
 async function connectToDatabase() {
@@ -80,17 +80,35 @@ export async function GET(request: Request) {
     
     const { client: mongoClient, db } = await connectToDatabase();
     client = mongoClient;
+    
     const collection = db.collection(COLLECTION);
     
-    // Buscar todos os carregamentos
+    // Construir query com filtro de data
     const query: any = {};
     
     if (date) {
-      const startDate = new Date(date);
-      startDate.setHours(0, 0, 0, 0);
+      // Criar data no fuso horário do Brasil (UTC-3)
+      const startDate = new Date(date + 'T00:00:00-03:00');
+      const endDate = new Date(date + 'T23:59:59.999-03:00');
       
-      const endDate = new Date(date);
-      endDate.setHours(23, 59, 59, 999);
+      console.log('Filtrando por data:', {
+        date,
+        startDate,
+        endDate,
+        startDateISO: startDate.toISOString(),
+        endDateISO: endDate.toISOString()
+      });
+      
+      query.createdAt = {
+        $gte: startDate,
+        $lte: endDate
+      };
+    } else {
+      // Se não há data especificada, buscar registros do dia atual (Brasil)
+      const hoje = new Date();
+      const hojeBrasil = new Date(hoje.getTime() - (3 * 60 * 60 * 1000));
+      const startDate = new Date(hojeBrasil.setHours(0, 0, 0, 0));
+      const endDate = new Date(hojeBrasil.setHours(23, 59, 59, 999));
       
       query.createdAt = {
         $gte: startDate,
@@ -98,12 +116,16 @@ export async function GET(request: Request) {
       };
     }
     
+    console.log('Query MongoDB:', JSON.stringify(query));
+    
     const carregamentos = await collection.find(query).sort({ doca: 1 }).toArray();
     
+    console.log(`Encontrados ${carregamentos.length} carregamentos`);
+  
     // Transformar dados para o formato do dashboard
     const todasDocas = carregamentos.map((item) => {
       let status: "ocupada" | "liberada" | "disponivel" = "disponivel";
-      
+  
       if (item.status === "em_uso") {
         status = "ocupada";
       } else if (item.status === "liberada") {
@@ -115,14 +137,26 @@ export async function GET(request: Request) {
         tempoTotal = calcularDiferencaHoras(item.horarios.encostouDoca, item.horarios.liberacao);
       }
       
+      // Determinar qual placa mostrar
+      let placaExibicao = "";
+      if (item.tipoVeiculo === "CARROCERIA") {
+        placaExibicao = item.placas?.cavaloMecanico || "";
+        if (item.placas?.bau) {
+          placaExibicao += ` / ${item.placas.bau}`;
+        }
+      } else {
+        placaExibicao = item.placas?.placaSimples || "";
+      }
+      
       return {
         id: item.doca,
         doca: item.doca,
         status,
         motorista: item.motorista?.nome || "N/A",
         cidadeDestino: item.cidadeDestino,
-        placaVeiculo: item.placas?.placaSimples,
+        placaVeiculo: placaExibicao,
         tipoVeiculo: item.tipoVeiculo,
+        placas: item.placas,
         horarioEntrada: item.horarios?.encostouDoca,
         horarioSaida: item.horarios?.liberacao,
         tempoTotal,
@@ -135,6 +169,7 @@ export async function GET(request: Request) {
         horarios: item.horarios,
         lacres: item.lacres,
         _id: item._id.toString(),
+        createdAt: item.createdAt,
       };
     });
     
@@ -158,59 +193,17 @@ export async function GET(request: Request) {
       timestamp: new Date().toISOString(),
       totalRegistros: carregamentos.length,
       success: true,
+      queryDate: query.createdAt,
     });
     
   } catch (error) {
     console.error('Erro na API do dashboard:', error);
     
-    // Fallback para desenvolvimento
-    if (process.env.NODE_ENV === 'development') {
-      const mockData = [
-        {
-          id: 2,
-          doca: 2,
-          status: "ocupada" as const,
-          motorista: "Marcio",
-          cidadeDestino: "Juazeiro - BA",
-          placaVeiculo: "NUT-3H18",
-          tipoVeiculo: "3/4" as const,
-          horarioEntrada: "16:09",
-          carga: {
-            gaiolas: 12,
-            volumosos: 8,
-            mangaPallets: 9,
-          },
-          _id: "697ce2f9514cc08d275122a0",
-        }
-      ];
-      
-      const mockStats = {
-        docasEmUso: 1,
-        rotasLiberadas: 0,
-        docasDisponiveis: 19,
-        tempoMedio: "01:30",
-        eficiencia: 85,
-        cargaTotal: {
-          gaiolas: 12,
-          volumosos: 8,
-          mangaPallets: 9,
-        },
-      };
-      
-      return NextResponse.json({
-        stats: mockStats,
-        todasDocas: mockData,
-        timestamp: new Date().toISOString(),
-        totalRegistros: mockData.length,
-        success: false,
-        error: "Usando dados mockados - MongoDB indisponível",
-      });
-    }
-    
     return NextResponse.json(
       { 
         error: 'Erro ao carregar dados do dashboard',
-        success: false 
+        success: false,
+        details: error instanceof Error ? error.message : String(error)
       },
       { status: 500 }
     );

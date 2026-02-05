@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from "react";
 import {
@@ -51,7 +51,6 @@ interface CarregamentoInput {
     volumosos: string;
     mangaPallets: string;
   };
-  observacoes?: string;
 }
 
 interface CSVRecord {
@@ -75,15 +74,15 @@ interface UploadData {
 
 // Mapeamento de códigos para cidades
 const CODIGO_PARA_CIDADE: { [key: string]: string } = {
-  "EBA14": "Serrinha - BA",
-  "EBA99": "Valença - BA",
-  "EBA4": "Santo Antônio de Jesus - BA",
-  "EBA19": "Itaberaba - BA",
-  "EBA3": "Jacobina - BA",
-  "EBA2": "PombaL - BA",
-  "EBA16": "Senhor do Bonfim - BA",
-  "EBA21": "Seabra - BA",
-  "EBA6": "Juazeiro - BA",
+  EBA14: "Serrinha - BA",
+  EBA99: "Valença - BA",
+  EBA4: "Santo Antônio de Jesus - BA",
+  EBA19: "Itaberaba - BA",
+  EBA3: "Jacobina - BA",
+  EBA2: "PombaL - BA",
+  EBA16: "Senhor do Bonfim - BA",
+  EBA21: "Seabra - BA",
+  EBA6: "Juazeiro - BA",
 };
 
 // Mapeamento inverso (cidade para código)
@@ -124,7 +123,10 @@ const calcularProgresso = (horarios: CarregamentoInput["horarios"]) => {
       color: "bg-purple-500",
     };
   }
-  if (horarios.inicioCarregamento && horarios.inicioCarregamento.trim() !== "") {
+  if (
+    horarios.inicioCarregamento &&
+    horarios.inicioCarregamento.trim() !== ""
+  ) {
     return {
       porcentagem: 50,
       status: "carregando",
@@ -177,7 +179,11 @@ export default function NovoCarregamento() {
       bau: "",
     },
     horarios: {
-      encostouDoca: new Date().toLocaleTimeString('pt-BR', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+      encostouDoca: new Date().toLocaleTimeString("pt-BR", {
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
       inicioCarregamento: "",
       fimCarregamento: "",
       liberacao: "",
@@ -205,7 +211,7 @@ export default function NovoCarregamento() {
   const fetchLatestUpload = async () => {
     try {
       setLoadingUpload(true);
-      const response = await fetch('/api/upload?limit=1');
+      const response = await fetch("/api/upload?limit=1");
 
       if (!response.ok) return;
 
@@ -215,7 +221,7 @@ export default function NovoCarregamento() {
         setLatestUpload(data.data[0]);
       }
     } catch (error) {
-      console.error('Erro ao buscar upload:', error);
+      console.error("Erro ao buscar upload:", error);
     } finally {
       setLoadingUpload(false);
     }
@@ -228,7 +234,7 @@ export default function NovoCarregamento() {
 
       if (codigoDestino) {
         // Filtrar motoristas pelo código de destino
-        const motoristas = latestUpload.data.filter(record => {
+        const motoristas = latestUpload.data.filter((record) => {
           return record.Destino === codigoDestino;
         });
 
@@ -240,11 +246,11 @@ export default function NovoCarregamento() {
       // Resetar motorista selecionado
       setSelectedMotorista("");
       // Resetar campos do motorista
-      setCarregamento(prev => ({
+      setCarregamento((prev) => ({
         ...prev,
         motorista: { nome: "", cpf: "" },
         tipoVeiculo: "3/4",
-        placas: { placaSimples: "", cavaloMecanico: "", bau: "" }
+        placas: { placaSimples: "", cavaloMecanico: "", bau: "" },
       }));
     } else {
       setFilteredMotoristas([]);
@@ -255,8 +261,8 @@ export default function NovoCarregamento() {
   // Quando um motorista é selecionado, preencher os campos
   useEffect(() => {
     if (selectedMotorista && filteredMotoristas.length > 0) {
-      const motorista = filteredMotoristas.find(m =>
-        m["Nome do motorista principal"] === selectedMotorista
+      const motorista = filteredMotoristas.find(
+        (m) => m["Nome do motorista principal"] === selectedMotorista,
       );
 
       if (motorista) {
@@ -280,12 +286,12 @@ export default function NovoCarregamento() {
         }
         updateCarregamento("tipoVeiculo", tipoVeiculo);
 
-        // Preencher placas
+        // Preencher placas baseado no tipo de veículo
         if (motorista["Veículo de tração"]) {
           if (tipoVeiculo === "CARROCERIA") {
             updatePlacas("cavaloMecanico", motorista["Veículo de tração"]);
-            if (motorista["Veiculo de carga"]) {
-              updatePlacas("bau", motorista["Veiculo de carga"]);
+            if (motorista["Veículo de carga"]) {
+              updatePlacas("bau", motorista["Veículo de carga"]);
             }
           } else {
             updatePlacas("placaSimples", motorista["Veículo de tração"]);
@@ -326,7 +332,7 @@ export default function NovoCarregamento() {
       ...prev,
       placas: {
         ...prev.placas,
-        [field]: value,
+        [field]: value.toUpperCase(),
       },
     }));
   };
@@ -348,7 +354,7 @@ export default function NovoCarregamento() {
     field: keyof CarregamentoInput["lacres"],
     value: string,
   ) => {
-    const numericValue = value.replace(/\D/g, '').slice(0, 7)
+    const numericValue = value.replace(/\D/g, "").slice(0, 7);
     setCarregamento((prev) => ({
       ...prev,
       lacres: {
@@ -362,7 +368,7 @@ export default function NovoCarregamento() {
     field: keyof CarregamentoInput["cargas"],
     value: string,
   ) => {
-    const numericValue = value.replace(/\D/g, '').slice(0, 2);
+    const numericValue = value.replace(/\D/g, "").slice(0, 2);
     setCarregamento((prev) => ({
       ...prev,
       cargas: {
@@ -390,7 +396,7 @@ export default function NovoCarregamento() {
   };
 
   const prepararDadosParaAPI = () => {
-    const dados = {
+    const dados: any = {
       doca: carregamento.doca,
       cidadeDestino: carregamento.cidadeDestino,
       sequenciaCarro: carregamento.sequenciaCarro,
@@ -399,13 +405,6 @@ export default function NovoCarregamento() {
         cpf: carregamento.motorista.cpf || "",
       },
       tipoVeiculo: carregamento.tipoVeiculo,
-      placas: {
-        placaSimples: carregamento.placas.placaSimples || "",
-        ...(carregamento.tipoVeiculo === "CARROCERIA" && {
-          cavaloMecanico: carregamento.placas.cavaloMecanico,
-          bau: carregamento.placas.bau,
-        }),
-      },
       horarios: {
         encostouDoca: carregamento.horarios.encostouDoca,
         inicioCarregamento: carregamento.horarios.inicioCarregamento,
@@ -418,16 +417,23 @@ export default function NovoCarregamento() {
         lateralDireito: carregamento.lacres.lateralDireito || "",
       },
       cargas: {
-        gaiolas: parseInt(carregamento.cargas.gaiolas),
-        volumosos: parseInt(carregamento.cargas.volumosos),
-        mangaPallets: parseInt(carregamento.cargas.mangaPallets),
+        gaiolas: parseInt(carregamento.cargas.gaiolas) || 0,
+        volumosos: parseInt(carregamento.cargas.volumosos) || 0,
+        mangaPallets: parseInt(carregamento.cargas.mangaPallets) || 0,
       },
       status: "em_uso",
     };
 
-    if (carregamento.tipoVeiculo !== "CARROCERIA") {
-      delete dados.placas.cavaloMecanico;
-      delete dados.placas.bau;
+    // Lógica condicional para placas
+    if (carregamento.tipoVeiculo === "CARROCERIA") {
+      dados.placas = {
+        cavaloMecanico: carregamento.placas.cavaloMecanico || "",
+        bau: carregamento.placas.bau || "",
+      };
+    } else {
+      dados.placas = {
+        placaSimples: carregamento.placas.placaSimples || "",
+      };
     }
 
     return dados;
@@ -449,9 +455,10 @@ export default function NovoCarregamento() {
         return;
       }
 
+      // Validação específica por tipo de veículo
       if (carregamento.tipoVeiculo === "CARROCERIA") {
-        if (!carregamento.placas.cavaloMecanico || !carregamento.placas.bau) {
-          alert("Para Carreta, informe o Cavalo mecânico e o Baú");
+        if (!carregamento.placas.cavaloMecanico) {
+          alert("Para Carreta, informe o Cavalo mecânico");
           setIsLoading(false);
           return;
         }
@@ -465,6 +472,8 @@ export default function NovoCarregamento() {
 
       const dadosParaAPI = prepararDadosParaAPI();
 
+      console.log("Enviando dados para API:", dadosParaAPI);
+
       const response = await fetch("/api/carregamento", {
         method: "POST",
         headers: {
@@ -475,7 +484,8 @@ export default function NovoCarregamento() {
 
       const data = await response.json();
 
-      if (response.ok) {
+      if (response.ok && data.success) {
+        alert("Carregamento criado com sucesso!");
         router.push("/carregamento/dashboard");
         router.refresh();
       } else {
@@ -497,31 +507,31 @@ export default function NovoCarregamento() {
       <div className="mb-8">
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center space-x-4">
-            <Link href="/" className="flex items-center text-gray-600 hover:text-gray-900">
+            <Link
+              href="/"
+              className="flex items-center text-gray-600 hover:text-gray-900"
+            >
               <ArrowLeft className="w-5 h-5 mr-1" />
               Voltar
             </Link>
             <div className="h-6 w-px bg-gray-300"></div>
-
           </div>
 
-          <Link href="/carregamento/dashboard" className="flex items-center text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-2 rounded-lg">
+          <Link
+            href="/carregamento/dashboard"
+            className="flex items-center text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-2 rounded-lg"
+          >
             <BarChart className="w-4 h-4 mr-2" />
             Dashboard
           </Link>
         </div>
       </div>
 
-
-
-
-      {/* Card de Upload - Mantido visualmente como antes, mas simplificado */}
+      {/* Card de Upload */}
       <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
         <div className="flex items-center mb-4">
           <Database className="w-5 h-5 text-gray-600 mr-2" />
-          <h2 className="text-lg font-semibold text-gray-800">
-            Dados do CSV
-          </h2>
+          <h2 className="text-lg font-semibold text-gray-800">Dados do CSV</h2>
         </div>
 
         {loadingUpload ? (
@@ -533,7 +543,8 @@ export default function NovoCarregamento() {
           <div className="text-center py-4 border-2 border-dashed border-gray-300 rounded-lg">
             <p className="text-gray-600">Nenhum arquivo CSV encontrado</p>
             <p className="text-sm text-gray-500 mt-1">
-              Faça upload de um arquivo CSV para habilitar o preenchimento automático
+              Faça upload de um arquivo CSV para habilitar o preenchimento
+              automático
             </p>
           </div>
         ) : (
@@ -546,7 +557,8 @@ export default function NovoCarregamento() {
                     {latestUpload.fileName}
                   </h3>
                   <p className="text-sm text-gray-600">
-                    Upload: {new Date(latestUpload.uploadDate).toLocaleString('pt-BR')}
+                    Upload:{" "}
+                    {new Date(latestUpload.uploadDate).toLocaleString("pt-BR")}
                   </p>
                 </div>
               </div>
@@ -555,7 +567,8 @@ export default function NovoCarregamento() {
               </span>
             </div>
             <p className="text-sm text-gray-500 mt-2">
-              {latestUpload.processedRecords} registro(s) disponível(is) para esta Facility
+              {latestUpload.processedRecords} registro(s) disponível(is) para
+              esta Facility
             </p>
           </div>
         )}
@@ -573,9 +586,14 @@ export default function NovoCarregamento() {
             <select
               className="w-full p-3 border border-gray-300 rounded-lg"
               value={carregamento.doca}
-              onChange={(e) => updateCarregamento("doca", parseInt(e.target.value))}
+              onChange={(e) =>
+                updateCarregamento("doca", parseInt(e.target.value))
+              }
             >
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map((doca) => (
+              {[
+                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+                19, 20,
+              ].map((doca) => (
                 <option key={doca} value={doca}>
                   Doca {doca}
                 </option>
@@ -627,7 +645,8 @@ export default function NovoCarregamento() {
               ))}
             </select>
             <p className="text-xs text-gray-500 mt-1">
-              {filteredMotoristas.length} motorista(s) disponível(is) para {selectedCity}
+              {filteredMotoristas.length} motorista(s) disponível(is) para{" "}
+              {selectedCity}
             </p>
           </div>
         )}
@@ -640,28 +659,34 @@ export default function NovoCarregamento() {
             </p>
             <div className="grid grid-cols-2 gap-3 text-sm text-green-700">
               <div>
-                <span className="font-medium">Motorista:</span> {carregamento.motorista.nome}
+                <span className="font-medium">Motorista:</span>{" "}
+                {carregamento.motorista.nome}
               </div>
               <div>
-                <span className="font-medium">ID:</span> {carregamento.motorista.cpf}
+                <span className="font-medium">ID:</span>{" "}
+                {carregamento.motorista.cpf}
               </div>
               <div>
-                <span className="font-medium">Tipo de Veículo:</span> {carregamento.tipoVeiculo}
+                <span className="font-medium">Tipo de Veículo:</span>{" "}
+                {carregamento.tipoVeiculo}
               </div>
               <div>
-                <span className="font-medium">Placa(s):</span> {carregamento.tipoVeiculo === "CARROCERIA"
-                  ? `${carregamento.placas.cavaloMecanico}/${carregamento.placas.bau}`
+                <span className="font-medium">Placa(s):</span>{" "}
+                {carregamento.tipoVeiculo === "CARROCERIA"
+                  ? `${carregamento.placas.cavaloMecanico || ""}${carregamento.placas.bau ? ` / ${carregamento.placas.bau}` : ""}`
                   : carregamento.placas.placaSimples}
               </div>
             </div>
           </div>
         )}
 
-        {/* Campos editáveis de motorista (se não selecionou do dropdown) */}
+        {/* Campos editáveis de motorista */}
         <div className="mb-6">
           <label className="flex text-sm font-medium text-gray-700 mb-2 items-center">
             <User className="w-4 h-4 mr-1" />
-            {selectedMotorista ? "Dados do Motorista" : "Informações do Motorista"}
+            {selectedMotorista
+              ? "Dados do Motorista (editar se necessário)"
+              : "Informações do Motorista"}
           </label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
@@ -736,8 +761,17 @@ export default function NovoCarregamento() {
               <button
                 key={tipo.value}
                 type="button"
-                onClick={() => updateCarregamento("tipoVeiculo", tipo.value)}
-                className={`p-4 border rounded-lg text-center ${carregamento.tipoVeiculo === tipo.value ? "border-blue-500 bg-blue-50" : "border-gray-300"}`}
+                onClick={() => {
+                  updateCarregamento("tipoVeiculo", tipo.value);
+                  // Resetar placas ao mudar tipo
+                  if (tipo.value === "CARROCERIA") {
+                    updatePlacas("placaSimples", "");
+                  } else {
+                    updatePlacas("cavaloMecanico", "");
+                    updatePlacas("bau", "");
+                  }
+                }}
+                className={`p-4 border rounded-lg text-center ${carregamento.tipoVeiculo === tipo.value ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:bg-gray-50"}`}
               >
                 <div className="font-medium">{tipo.label}</div>
                 <div className="text-sm text-gray-500">{tipo.desc}</div>
@@ -746,45 +780,54 @@ export default function NovoCarregamento() {
           </div>
         </div>
 
-        {/* Placas do Veículo */}
+        {/* Placas do Veículo - Lógica condicional */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Placas do Veículo
           </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {carregamento.tipoVeiculo === "CARROCERIA" ? (
-              <>
+          {carregamento.tipoVeiculo === "CARROCERIA" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Cavalo Mecânico
+                </label>
                 <input
                   type="text"
-                  placeholder="Cavalo Mecânico"
-                  className="p-3 border border-gray-300 rounded-lg uppercase"
+                  placeholder="Placa do cavalo"
+                  className="w-full p-3 border border-gray-300 rounded-lg uppercase"
                   value={carregamento.placas.cavaloMecanico || ""}
                   onChange={(e) =>
-                    updatePlacas("cavaloMecanico", e.target.value.toUpperCase())
+                    updatePlacas("cavaloMecanico", e.target.value)
                   }
                 />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Baú (opcional)
+                </label>
                 <input
                   type="text"
-                  placeholder="Baú"
-                  className="p-3 border border-gray-300 rounded-lg uppercase"
+                  placeholder="Placa do baú"
+                  className="w-full p-3 border border-gray-300 rounded-lg uppercase"
                   value={carregamento.placas.bau || ""}
-                  onChange={(e) =>
-                    updatePlacas("bau", e.target.value.toUpperCase())
-                  }
+                  onChange={(e) => updatePlacas("bau", e.target.value)}
                 />
-              </>
-            ) : (
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">
+                Placa do Veículo
+              </label>
               <input
                 type="text"
-                placeholder={carregamento.tipoVeiculo}
-                className="p-3 border border-gray-300 rounded-lg uppercase"
+                placeholder={`Placa do ${carregamento.tipoVeiculo}`}
+                className="w-full p-3 border border-gray-300 rounded-lg uppercase"
                 value={carregamento.placas.placaSimples || ""}
-                onChange={(e) =>
-                  updatePlacas("placaSimples", e.target.value.toUpperCase())
-                }
+                onChange={(e) => updatePlacas("placaSimples", e.target.value)}
               />
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Horários */}
@@ -866,10 +909,12 @@ export default function NovoCarregamento() {
             </span>
           </div>
           <div className="mt-2 text-xs text-gray-500">
-            {progresso.porcentagem === 0 && "Preencha os horários para atualizar o progresso"}
+            {progresso.porcentagem === 0 &&
+              "Preencha os horários para atualizar o progresso"}
             {progresso.porcentagem === 25 && "Veículo encostou na doca"}
             {progresso.porcentagem === 50 && "Carregamento em andamento"}
-            {progresso.porcentagem === 75 && "Carregamento finalizado, aguardando liberação"}
+            {progresso.porcentagem === 75 &&
+              "Carregamento finalizado, aguardando liberação"}
             {progresso.porcentagem === 100 && "Veículo liberado!"}
           </div>
         </div>
@@ -886,7 +931,7 @@ export default function NovoCarregamento() {
                 Traseiro (obrigatório)
               </label>
               <input
-                type="number"
+                type="text"
                 placeholder="Número do lacre"
                 className="w-full p-3 border border-gray-300 rounded-lg"
                 value={carregamento.lacres.traseiro}
@@ -898,11 +943,13 @@ export default function NovoCarregamento() {
                 Lateral Esquerdo (opcional)
               </label>
               <input
-                type="number"
+                type="text"
                 placeholder="Número do lacre"
                 className="w-full p-3 border border-gray-300 rounded-lg"
                 value={carregamento.lacres.lateralEsquerdo || ""}
-                onChange={(e) => updateLacres("lateralEsquerdo", e.target.value)}
+                onChange={(e) =>
+                  updateLacres("lateralEsquerdo", e.target.value)
+                }
               />
             </div>
             <div>
@@ -910,7 +957,7 @@ export default function NovoCarregamento() {
                 Lateral Direito (opcional)
               </label>
               <input
-                type="number"
+                type="text"
                 placeholder="Número do lacre"
                 className="w-full p-3 border border-gray-300 rounded-lg"
                 value={carregamento.lacres.lateralDireito || ""}
@@ -934,12 +981,11 @@ export default function NovoCarregamento() {
               <input
                 type="number"
                 min="0"
+                max="99"
                 className="w-full p-3 border border-gray-300 rounded-lg"
                 placeholder="0"
                 value={carregamento.cargas.gaiolas}
-                onChange={(e) =>
-                  updateCargas("gaiolas", e.target.value)
-                }
+                onChange={(e) => updateCargas("gaiolas", e.target.value)}
               />
             </div>
             <div>
@@ -949,12 +995,11 @@ export default function NovoCarregamento() {
               <input
                 type="number"
                 min="0"
+                max="99"
                 className="w-full p-3 border border-gray-300 rounded-lg"
                 placeholder="0"
                 value={carregamento.cargas.volumosos}
-                onChange={(e) =>
-                  updateCargas("volumosos", e.target.value)
-                }
+                onChange={(e) => updateCargas("volumosos", e.target.value)}
               />
             </div>
             <div>
@@ -964,12 +1009,11 @@ export default function NovoCarregamento() {
               <input
                 type="number"
                 min="0"
+                max="99"
                 className="w-full p-3 border border-gray-300 rounded-lg"
                 placeholder="0"
                 value={carregamento.cargas.mangaPallets}
-                onChange={(e) =>
-                  updateCargas("mangaPallets",e.target.value)
-                }
+                onChange={(e) => updateCargas("mangaPallets", e.target.value)}
               />
             </div>
           </div>

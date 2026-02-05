@@ -1,5 +1,4 @@
-'use client'
-
+"use client";
 
 import { useState, useEffect } from "react";
 import {
@@ -18,7 +17,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from 'react';
+import { Suspense } from "react";
 
 interface CarregamentoInput {
   doca: number;
@@ -50,8 +49,8 @@ interface CarregamentoInput {
     volumosos: string;
     mangaPallets: string;
   };
-  observacoes?: string;
   _id?: string;
+  status?: string;
 }
 
 const calcularProgresso = (horarios: CarregamentoInput["horarios"]) => {
@@ -107,14 +106,13 @@ const calcularProgresso = (horarios: CarregamentoInput["horarios"]) => {
   };
 };
 
- function EditarCarregamentoContent() {
+function EditarCarregamentoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const docaId = searchParams.get("id");
   const docaNumero = searchParams.get("doca");
 
-
-const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -145,25 +143,24 @@ const [isLoading, setIsLoading] = useState(true);
       lateralDireito: "",
     },
     cargas: {
-      gaiolas: "",
-      volumosos: "",
-      mangaPallets: "",
+      gaiolas: "0",
+      volumosos: "0",
+      mangaPallets: "0",
     },
-    observacoes: "",
   });
 
   const [selectCarro, setSelectCarro] = useState<number>(1);
 
   const cidades = [
-    "Juazeiro - BA",
+    "Serrinha - BA",
+    "Valença - BA",
     "Santo Antônio de Jesus - BA",
     "Itaberaba - BA",
-    "Seabra - BA",
-    "Valença - BA",
     "Jacobina - BA",
-    "Serrinha - BA",
-    "Pombal - BA",
-    "Bonfim - BA",
+    "PombaL - BA",
+    "Senhor do Bonfim - BA",
+    "Seabra - BA",
+    "Juazeiro - BA",
   ];
 
   // Carregar dados do carregamento existente
@@ -176,13 +173,14 @@ const [isLoading, setIsLoading] = useState(true);
       }
 
       try {
-        console.log("o Doca ID: " + docaId);
+        console.log("Carregando dados para ID:", docaId);
         const response = await fetch(`/api/carregamento/${docaId}`);
         if (!response.ok) {
           throw new Error("Erro ao carregar dados do carregamento");
         }
 
         const data = await response.json();
+        console.log("Dados recebidos:", data);
 
         // Preencher formulário com dados existentes
         setCarregamento({
@@ -211,12 +209,12 @@ const [isLoading, setIsLoading] = useState(true);
             lateralDireito: data.lacres?.lateralDireito || "",
           },
           cargas: {
-            gaiolas: data.cargas?.gaiolas || "",
-            volumosos: data.cargas?.volumosos || "",
-            mangaPallets: data.cargas?.mangaPallets || "",
+            gaiolas: data.cargas?.gaiolas?.toString() || "0",
+            volumosos: data.cargas?.volumosos?.toString() || "0",
+            mangaPallets: data.cargas?.mangaPallets?.toString() || "0",
           },
-          observacoes: data.observacoes || "",
           _id: data._id,
+          status: data.status,
         });
 
         setSelectCarro(data.sequenciaCarro || 1);
@@ -259,7 +257,7 @@ const [isLoading, setIsLoading] = useState(true);
       ...prev,
       placas: {
         ...prev.placas,
-        [field]: value,
+        [field]: value.toUpperCase(),
       },
     }));
   };
@@ -281,7 +279,7 @@ const [isLoading, setIsLoading] = useState(true);
     field: keyof CarregamentoInput["lacres"],
     value: string,
   ) => {
-    const numericValue = value.replace(/\D/g, '').slice(0, 7);
+    const numericValue = value.replace(/\D/g, "").slice(0, 7);
     setCarregamento((prev) => ({
       ...prev,
       lacres: {
@@ -295,7 +293,7 @@ const [isLoading, setIsLoading] = useState(true);
     field: keyof CarregamentoInput["cargas"],
     value: string,
   ) => {
-    const numericValue = value.replace(/\D/g, '').slice(0, 2);
+    const numericValue = value.replace(/\D/g, "").slice(0, 2);
     setCarregamento((prev) => ({
       ...prev,
       cargas: {
@@ -337,8 +335,7 @@ const [isLoading, setIsLoading] = useState(true);
   };
 
   const prepararDadosParaAPI = () => {
-    const dados = {
-      doca: carregamento.doca,
+    const dados: any = {
       cidadeDestino: carregamento.cidadeDestino,
       sequenciaCarro: carregamento.sequenciaCarro,
       motorista: {
@@ -346,13 +343,6 @@ const [isLoading, setIsLoading] = useState(true);
         cpf: carregamento.motorista.cpf || "",
       },
       tipoVeiculo: carregamento.tipoVeiculo,
-      placas: {
-        placaSimples: carregamento.placas.placaSimples || "",
-        ...(carregamento.tipoVeiculo === "CARROCERIA" && {
-          cavaloMecanico: carregamento.placas.cavaloMecanico,
-          bau: carregamento.placas.bau,
-        }),
-      },
       horarios: {
         encostouDoca: carregamento.horarios.encostouDoca,
         inicioCarregamento: carregamento.horarios.inicioCarregamento,
@@ -365,17 +355,22 @@ const [isLoading, setIsLoading] = useState(true);
         lateralDireito: carregamento.lacres.lateralDireito || "",
       },
       cargas: {
-        gaiolas: carregamento.cargas.gaiolas,
-        volumosos: carregamento.cargas.volumosos,
-        mangaPallets: carregamento.cargas.mangaPallets,
+        gaiolas: parseInt(carregamento.cargas.gaiolas) || 0,
+        volumosos: parseInt(carregamento.cargas.volumosos) || 0,
+        mangaPallets: parseInt(carregamento.cargas.mangaPallets) || 0,
       },
-      status: "em_uso",
-      observacoes: carregamento.observacoes || "",
     };
 
-    if (carregamento.tipoVeiculo !== "CARROCERIA") {
-      delete dados.placas.cavaloMecanico;
-      delete dados.placas.bau;
+    // Lógica condicional para placas
+    if (carregamento.tipoVeiculo === "CARROCERIA") {
+      dados.placas = {
+        cavaloMecanico: carregamento.placas.cavaloMecanico || "",
+        bau: carregamento.placas.bau || "",
+      };
+    } else {
+      dados.placas = {
+        placaSimples: carregamento.placas.placaSimples || "",
+      };
     }
 
     return dados;
@@ -399,9 +394,10 @@ const [isLoading, setIsLoading] = useState(true);
         return;
       }
 
+      // Validação específica por tipo de veículo
       if (carregamento.tipoVeiculo === "CARROCERIA") {
-        if (!carregamento.placas.cavaloMecanico || !carregamento.placas.bau) {
-          setError("Para carroceria, informe o cavalo mecânico e o baú");
+        if (!carregamento.placas.cavaloMecanico) {
+          setError("Para carroceria, informe o cavalo mecânico");
           setIsSaving(false);
           return;
         }
@@ -415,7 +411,9 @@ const [isLoading, setIsLoading] = useState(true);
 
       const dadosParaAPI = prepararDadosParaAPI();
 
-      const response = await fetch(`/api/carregamentos/${docaId}`, {
+      console.log("Enviando atualização:", dadosParaAPI);
+
+      const response = await fetch(`/api/carregamento/${docaId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -425,7 +423,7 @@ const [isLoading, setIsLoading] = useState(true);
 
       const data = await response.json();
 
-      if (response.ok) {
+      if (response.ok && data.success) {
         setSuccess("Carregamento atualizado com sucesso!");
         setTimeout(() => {
           router.push("/carregamento/dashboard");
@@ -456,10 +454,15 @@ const [isLoading, setIsLoading] = useState(true);
 
       const dadosParaAPI = {
         ...prepararDadosParaAPI(),
+        horarios: {
+          ...carregamento.horarios,
+        },
         status: "liberada",
       };
 
-      const response = await fetch(`/api/carregamentos/${docaId}`, {
+      console.log("Finalizando carregamento:", dadosParaAPI);
+
+      const response = await fetch(`/api/carregamento/${docaId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -469,7 +472,7 @@ const [isLoading, setIsLoading] = useState(true);
 
       const data = await response.json();
 
-      if (response.ok) {
+      if (response.ok && data.success) {
         setSuccess("Carregamento finalizado com sucesso! Redirecionando...");
         setTimeout(() => {
           router.push("/carregamento/dashboard");
@@ -634,7 +637,7 @@ const [isLoading, setIsLoading] = useState(true);
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Tipo de Veículo
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {[
               { value: "3/4", label: "3/4", desc: "1 placa" },
               { value: "TRUCK", label: "Truck", desc: "1 placa" },
@@ -644,8 +647,17 @@ const [isLoading, setIsLoading] = useState(true);
               <button
                 key={tipo.value}
                 type="button"
-                onClick={() => updateCarregamento("tipoVeiculo", tipo.value)}
-                className={`p-4 border rounded-lg text-center ${carregamento.tipoVeiculo === tipo.value ? "border-blue-500 bg-blue-50" : "border-gray-300"}`}
+                onClick={() => {
+                  updateCarregamento("tipoVeiculo", tipo.value);
+                  // Resetar placas ao mudar tipo
+                  if (tipo.value === "CARROCERIA") {
+                    updatePlacas("placaSimples", "");
+                  } else {
+                    updatePlacas("cavaloMecanico", "");
+                    updatePlacas("bau", "");
+                  }
+                }}
+                className={`p-4 border rounded-lg text-center ${carregamento.tipoVeiculo === tipo.value ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:bg-gray-50"}`}
               >
                 <div className="font-medium">{tipo.label}</div>
                 <div className="text-sm text-gray-500">{tipo.desc}</div>
@@ -658,40 +670,49 @@ const [isLoading, setIsLoading] = useState(true);
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Placas do Veículo
           </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {carregamento.tipoVeiculo === "CARROCERIA" ? (
-              <>
+          {carregamento.tipoVeiculo === "CARROCERIA" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Cavalo Mecânico
+                </label>
                 <input
                   type="text"
-                  placeholder="Cavalo Mecânico"
-                  className="p-3 border border-gray-300 rounded-lg uppercase"
+                  placeholder="Placa do cavalo"
+                  className="w-full p-3 border border-gray-300 rounded-lg uppercase"
                   value={carregamento.placas.cavaloMecanico || ""}
                   onChange={(e) =>
-                    updatePlacas("cavaloMecanico", e.target.value.toUpperCase())
+                    updatePlacas("cavaloMecanico", e.target.value)
                   }
                 />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Baú (opcional)
+                </label>
                 <input
                   type="text"
-                  placeholder="Baú"
-                  className="p-3 border border-gray-300 rounded-lg uppercase"
+                  placeholder="Placa do baú"
+                  className="w-full p-3 border border-gray-300 rounded-lg uppercase"
                   value={carregamento.placas.bau || ""}
-                  onChange={(e) =>
-                    updatePlacas("bau", e.target.value.toUpperCase())
-                  }
+                  onChange={(e) => updatePlacas("bau", e.target.value)}
                 />
-              </>
-            ) : (
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">
+                Placa do Veículo
+              </label>
               <input
                 type="text"
-                placeholder={carregamento.tipoVeiculo}
-                className="p-3 border border-gray-300 rounded-lg uppercase"
+                placeholder={`Placa do ${carregamento.tipoVeiculo}`}
+                className="w-full p-3 border border-gray-300 rounded-lg uppercase"
                 value={carregamento.placas.placaSimples || ""}
-                onChange={(e) =>
-                  updatePlacas("placaSimples", e.target.value.toUpperCase())
-                }
+                onChange={(e) => updatePlacas("placaSimples", e.target.value)}
               />
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         <div className="mb-6">
@@ -792,7 +813,7 @@ const [isLoading, setIsLoading] = useState(true);
                 Traseiro (obrigatório)
               </label>
               <input
-                type="number"
+                type="text"
                 placeholder="Número do lacre"
                 className="w-full p-3 border border-gray-300 rounded-lg"
                 value={carregamento.lacres.traseiro}
@@ -804,7 +825,7 @@ const [isLoading, setIsLoading] = useState(true);
                 Lateral Esquerdo (opcional)
               </label>
               <input
-                type="number"
+                type="text"
                 placeholder="Número do lacre"
                 className="w-full p-3 border border-gray-300 rounded-lg"
                 value={carregamento.lacres.lateralEsquerdo || ""}
@@ -818,7 +839,7 @@ const [isLoading, setIsLoading] = useState(true);
                 Lateral Direito (opcional)
               </label>
               <input
-                type="number"
+                type="text"
                 placeholder="Número do lacre"
                 className="w-full p-3 border border-gray-300 rounded-lg"
                 value={carregamento.lacres.lateralDireito || ""}
@@ -841,12 +862,11 @@ const [isLoading, setIsLoading] = useState(true);
               <input
                 type="number"
                 min="0"
+                max="99"
                 className="w-full p-3 border border-gray-300 rounded-lg"
                 placeholder="0"
                 value={carregamento.cargas.gaiolas}
-                onChange={(e) =>
-                  updateCargas("gaiolas",e.target.value || "0")
-                }
+                onChange={(e) => updateCargas("gaiolas", e.target.value || "0")}
               />
             </div>
             <div>
@@ -855,8 +875,8 @@ const [isLoading, setIsLoading] = useState(true);
               </label>
               <input
                 type="number"
-                inputMode="numeric"
                 min="0"
+                max="99"
                 className="w-full p-3 border border-gray-300 rounded-lg"
                 placeholder="0"
                 value={carregamento.cargas.volumosos}
@@ -871,8 +891,8 @@ const [isLoading, setIsLoading] = useState(true);
               </label>
               <input
                 type="number"
-                inputMode="numeric"
                 min="0"
+                max="99"
                 className="w-full p-3 border border-gray-300 rounded-lg"
                 placeholder="0"
                 value={carregamento.cargas.mangaPallets}
@@ -946,21 +966,22 @@ const [isLoading, setIsLoading] = useState(true);
       </div>
     </div>
   );
+}
 
- }
-
- export default function EditarCarregamento() {
+export default function EditarCarregamento() {
   return (
-    <Suspense fallback={
-      <div className="max-w-4xl mx-auto mt-20 p-4">
-        <div className="flex justify-center items-center h-64">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-            <p className="text-gray-600">Carregando dados...</p>
+    <Suspense
+      fallback={
+        <div className="max-w-4xl mx-auto mt-20 p-4">
+          <div className="flex justify-center items-center h-64">
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+              <p className="text-gray-600">Carregando dados...</p>
+            </div>
           </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <EditarCarregamentoContent />
     </Suspense>
   );
